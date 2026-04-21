@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     SQL_VIEW_ID: str
     CONTROL_FILE_PATH: str
     DATA_BASE_DIR: str
+    SECRET_KEY: str
+    TOKEN_EXPIRE_MINUTES: int
+    ADMIN_USERNAME : str
+    ADMIN_EMAIL : str
+    ADMIN_PASSWORD : str
 
     model_config = SettingsConfigDict(
         env_file=".env",

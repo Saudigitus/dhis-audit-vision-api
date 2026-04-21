@@ -5,24 +5,25 @@ from fastapi import Depends, APIRouter
 from core.common.generics.crud_base import CRUDBase
 from core.models.models import AuditObject
 from fastapi import Request
-
+from core.auth.dependencies import get_current_user, require_superuser
+from core.auth.models import User
 router = APIRouter()
 
 audit_crud = CRUDBase[AuditObject, AuditObjectCreate, AuditObjectRead](AuditObject)
 
 
 @router.post("/create/", response_model=AuditObjectRead)
-def upsert_audit_object(payload: AuditObjectCreate, db: Session = Depends(get_db)):
+def upsert_audit_object(payload: AuditObjectCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return audit_crud.create(db, payload_in=payload)
 
 
 @router.get("/{id}", response_model=AuditObjectRead)
-def get_audit_object(id: str, db: Session = Depends(get_db)):
+def get_audit_object(id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return audit_crud.get(db, id=id)
 
 
 @router.get("")
-def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db)):
+def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     # Grab all query params except pagination ones
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
@@ -31,6 +32,6 @@ def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: S
 
 
 @router.delete("/{id}")
-def delete_audit_object(id: str, db: Session = Depends(get_db)):
+def delete_audit_object(id: str, db: Session = Depends(get_db), _: User = Depends(require_superuser)):
     audit_crud.delete(db, id=id)
     return {"message": "audit object deleted"}
