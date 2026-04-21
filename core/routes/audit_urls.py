@@ -4,13 +4,11 @@ from core.db.dependencies import get_db
 from fastapi import Depends, APIRouter
 from core.common.generics.crud_base import CRUDBase
 from core.models.models import Audit
-from typing import List
+from fastapi import Request
 
 router = APIRouter()
 
 audit_crud = CRUDBase[Audit, AuditCreate, AuditRead](Audit)
-
-# Routes
 
 
 @router.post("/create/", response_model=AuditRead)
@@ -23,9 +21,13 @@ def get_audit(id: str, db: Session = Depends(get_db)):
     return audit_crud.get(db, id=id)
 
 
-@router.get("", response_model=List[AuditRead])
-def get_audits(page: int = 1, pageSize: int = 100, db: Session = Depends(get_db)):
-    return audit_crud.get_all(db, page=page, pageSize=pageSize)
+@router.get("")
+def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db)):
+    # Grab all query params except pagination ones
+    excluded = {"page", "pageSize"}
+    filters = {k: v for k, v in request.query_params.items() if k not in excluded}
+    result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters)
+    return {"pager": result["pager"], "audits": result["data"]}
 
 
 @router.delete("/{id}")

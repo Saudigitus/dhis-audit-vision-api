@@ -19,12 +19,12 @@ class Audit(GenericModel):
 
     id = Column(String(11), primary_key=True, default=generate_custom_id)
 
-    audit_type = Column(Enum(AuditType), nullable=False)
-    audit_scope = Column(Enum(AuditScope), nullable=False)
+    auditType = Column(Enum(AuditType), nullable=False)
+    auditScope = Column(Enum(AuditScope), nullable=False)
     klass = Column(Text, nullable=False)
     attributes = Column(JSONB, nullable=True)
     data = Column(BYTEA, nullable=True)
-    created_by = Column(String, nullable=False)
+    createdBy = Column(String, nullable=False)
     uid = Column(String, nullable=True)
     code = Column(String, nullable=True)
 
@@ -33,6 +33,6 @@ class AuditObject(GenericModel):
     __tablename__ = "audit_object"
 
     id = Column(String(11), primary_key=True, default=generate_custom_id)
-    audit_id = Column(String(11), nullable=False)
-    object_id = Column(String, nullable=False)
-    object_data = Column(JSON, nullable=False)
+    auditId = Column(String(11), nullable=False)
+    objectId = Column(String, nullable=False)
+    objectData = Column(JSON, nullable=False)

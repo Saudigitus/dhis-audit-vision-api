@@ -47,12 +47,12 @@ def parse_audit_row(headers: List[str], row: List) -> Audit:
 
     audit = Audit(
         id=generate_custom_id(),
-        audit_type=AuditType(record["audittype"]),
-        audit_scope=AuditScope(record["auditscope"]),
+        auditType=AuditType(record["audittype"]),
+        auditScope=AuditScope(record["auditscope"]),
         klass=record["klass"],
         attributes=attributes,
         data=None,  # ignore invalid Java byte references
-        created_by=record["createdby"],
+        createdBy=record["createdby"],
         uid=record.get("uid"),
         code=record.get("code"),
     )
@@ -128,7 +128,7 @@ def create_audit_objects_from_audit(audits: list[Audit]) -> List[AuditObject]:
                 server = {"url": SERVER_DHIS2_URL, "auth": SERVER_DHIS2_AUTH,  "authType": constants.BASIC}
                 if resource_id:
                     object_data = get_resouce_object_data(server, resource_endpoint, resource_id)
-                    audit_object = AuditObject(audit_id=audit.id, object_id=resource_id, object_data=object_data)
+                    audit_object = AuditObject(auditId=audit.id, objectId=resource_id, objectData=object_data)
                     audit_objects.append(audit_object)
         return audit_objects
     except Exception as e:
