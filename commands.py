@@ -1,20 +1,26 @@
 import typer
 from core.db.session import SessionLocal
-from core.db.seeders.seed import DataSeeder
+from core.audit.audit import AuditProcess
 
-app = typer.Typer()
+app = typer.Typer(invoke_without_command=False)
 
-@app.command()
-def seed_data():
-    """Seed data into the database"""
+
+@app.command("start-audit")
+def start_audit():
+    """Start the audit process"""
     try:
-        DataSeeder.run()
-        typer.echo(f"Successfully seeded data")
+        audit_process = AuditProcess()
+        audit_process.run()
+        typer.echo(f"Audit process completed successfully")
     except Exception as e:
-        typer.echo(f"Error seeding users: {e}")
-    finally:
-        # db.close()
-        pass
+        typer.echo(f"Error during audit process: {e}")
+
+
+@app.command("check-status")
+def check_status():
+    """Check the status of the audit process"""
+    typer.echo(f"Audit process is running...")
+
 
 if __name__ == "__main__":
     app()

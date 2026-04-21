@@ -1,7 +1,7 @@
 from core.common.enums.audit_enums import AuditType, AuditScope
 from core.utils.id_generator import generate_custom_id
 from sqlalchemy.dialects.postgresql import JSONB, BYTEA
-from sqlalchemy import Column, String, Enum, Text
+from sqlalchemy import Column, String, Enum, Text, JSON
 from sqlalchemy import Column, DateTime
 from sqlalchemy.sql import func
 from core.db.base import Base
@@ -27,3 +27,12 @@ class Audit(GenericModel):
     created_by = Column(String, nullable=False)
     uid = Column(String, nullable=True)
     code = Column(String, nullable=True)
+
+
+class AuditObject(GenericModel):
+    __tablename__ = "audit_object"
+
+    id = Column(String(11), primary_key=True, default=generate_custom_id)
+    audit_id = Column(String(11), nullable=False)
+    object_id = Column(String, nullable=False)
+    object_data = Column(JSON, nullable=False)

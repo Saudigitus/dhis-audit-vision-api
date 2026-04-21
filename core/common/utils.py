@@ -1,12 +1,13 @@
-from core.models.models import Server
 from core.common.constants import constants, request_methods
 import json
 import requests
 import isodate
 from sqlalchemy.orm import Session
-from core.models.models import ServiceConfigurations
 from core.db.session import SessionLocal
 
+import urllib3
+# Desabilita apenas o aviso de certificado não verificado
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 db = SessionLocal()
 
@@ -20,28 +21,31 @@ def make_request(url: str, method: str = request_methods.GET, headers: dict = No
 
         if method == request_methods.POST:
             response = requests.post(url, headers=headers, data=json.dumps(payload), verify=False)
+            response.raise_for_status()
             return response.json()
 
         if method == request_methods.GET:
             response = requests.get(url, headers=headers, verify=False)
+            response.raise_for_status()
             return response.json()
 
         if method == request_methods.PUT:
             response = requests.put(url, headers=headers, data=json.dumps(payload), verify=False)
+            response.raise_for_status()
             return response.json()
 
         return None
 
     except Exception as e:
-        return None
+        print(f"Error during audit process: {e}")
+        raise e
 
 
-def generate_headers(server: Server) -> dict:
+def generate_headers(server: dict) -> dict:
 
-    if server.authType.name == constants.BASIC:
-        return {"Authorization": f"Basic {server.auth}", 'Accept': 'application/json',
+    if server.get('authType', {}) == constants.BASIC:
+        return {"Authorization": f"Basic {server.get('auth')}", 'Accept': 'application/json',
                 'Content-Type': 'application/json'}
-
     return None
 
 
@@ -84,7 +88,7 @@ def get_value_from_path(data: dict, path: str):
 
             if data is None:
                 return None  # Return None if any key/path is not found.
-    
+
     value = None
     if type(data) is bool or data is None:
         value = data
@@ -146,17 +150,3 @@ def get_value(data: dict, path: str, mapping: dict):
     return get_value_from_mapping(value=value, mapping=mapping)
 
 
-def get_global_configurations():
-
-    service_configuration = db.query(ServiceConfigurations).first()
-    service_configuration = service_configuration.__dict__
-
-    return service_configuration
-
-    # return {
-    #     'enrollmentDetailProgramStage': "Ni2qsy2WJn4",
-    #     'academicYearDataElement': "iDSrFrrVgmX",
-    #     'trackerEntityIdentifier': "Jm5zlb098Yo",
-    #     'statementIdentifier': "actor.mbox",
-    #     'program': "wQaiD2V27Dp"
-    # }

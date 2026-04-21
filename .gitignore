@@ -54,3 +54,5 @@ alembic/versions
 logs/
 
 test.db
+
+/data

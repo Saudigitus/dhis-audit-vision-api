@@ -16,6 +16,9 @@ class Settings(BaseSettings):
 
     SERVER_DHIS2_URL: str
     SERVER_DHIS2_AUTH: str
+    SQL_VIEW_ID: str
+    CONTROL_FILE_PATH: str
+    DATA_BASE_DIR: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

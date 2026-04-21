@@ -42,3 +42,21 @@ class AuditCreate(AuditBase, BaseCreateSchema):
 
 class AuditRead(AuditBase, BaseReadSchema):
     pass
+
+
+# ========================
+# AuditObject Schemas
+# ========================
+class AuditObjectBase(BaseModel):
+    auditId: str = Field(alias="audit_id")
+    objectId: str = Field(alias="object_id")
+    objectData: list | dict = Field(alias="object_data")
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class AuditObjectCreate(AuditObjectBase, BaseCreateSchema):
+    pass
+
+
+class AuditObjectRead(AuditObjectBase, BaseReadSchema):
+    pass
