@@ -14,17 +14,17 @@ audit_crud = CRUDBase[Audit, AuditCreate, AuditRead](Audit)
 
 
 @router.post("/create/", response_model=AuditRead)
-def upsert_audit(payload: AuditCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def upsert_audit(payload: AuditCreate, db: Session = Depends(get_db)):
     return audit_crud.create(db, payload_in=payload)
 
 
 @router.get("/{id}", response_model=AuditRead)
-def get_audit(id: str, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def get_audit(id: str, db: Session = Depends(get_db)):
     return audit_crud.get(db, id=id)
 
 
 @router.get("")
-def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db)):
     # Grab all query params except pagination ones
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
@@ -33,6 +33,6 @@ def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: S
 
 
 @router.delete("/{id}")
-def delete_audit(id: str, db: Session = Depends(get_db), _: User = Depends(require_superuser)):
+def delete_audit(id: str, db: Session = Depends(get_db)):
     audit_crud.delete(db, id=id)
     return {"message": "audit deleted"}
