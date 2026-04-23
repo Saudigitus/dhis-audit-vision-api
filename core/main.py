@@ -4,9 +4,17 @@ from core.routes.audit_urls import router as audit_router
 from core.auth.router import router as auth_router
 import os
 import json
-
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="FastAPI Project - DHIS2_AUDIT_VISION", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(audit_router, prefix="/api/audits", tags=["Audits"])
 app.include_router(audit_object_router, prefix="/api/auditObjects", tags=["Audit Objects"])
