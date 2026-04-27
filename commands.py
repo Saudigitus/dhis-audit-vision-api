@@ -6,6 +6,7 @@ from core.audit.audit import AuditProcess
 import os
 from core.auth.security import hash_password
 from dotenv import load_dotenv
+import traceback
 load_dotenv()  # Carrega as variáveis de ambiente do arquivo .env
 
 app = typer.Typer(invoke_without_command=False)
@@ -20,6 +21,7 @@ def start_audit():
         typer.echo(f"Audit process completed successfully")
     except Exception as e:
         typer.echo(f"Error during audit process: {e}")
+        traceback.print_exc()
 
 
 @app.command("seed-superuser")

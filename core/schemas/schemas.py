@@ -26,7 +26,7 @@ class BaseReadSchema(BaseModel):
 # ========================
 
 class AuditBase(BaseModel):
-    auditType: AuditType = Field(alias="auditype")
+    auditType: AuditType = Field(alias="auditType")
     auditScope: AuditScope = Field(alias="auditScope")
     klass: str
     attributes: Optional[Dict] = None
@@ -51,6 +51,8 @@ class AuditObjectBase(BaseModel):
     auditId: str = Field(alias="auditId")
     objectId: str = Field(alias="objectId")
     objectData: list | dict = Field(alias="objectData")
+    auditScope: AuditScope = Field(alias="auditScope")
+    auditType: AuditType = Field(alias="auditType")
     model_config = ConfigDict(populate_by_name=True)
 
 

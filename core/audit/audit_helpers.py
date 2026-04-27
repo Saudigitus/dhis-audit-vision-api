@@ -104,7 +104,7 @@ def save_audit_json(db: Session, payload: Dict,  batch_size: int = BATCH_SIZE) -
             if hasattr(e, "orig"):
                 print("DB driver error:", e.orig)
             raise e
-        
+
     print(f"Finished saving audits. Total: {total}, Success: {success}, Failed: {failed}")
 
     return {
@@ -124,11 +124,13 @@ def create_audit_objects_from_audit(audits: list[Audit]) -> List[AuditObject]:
         for audit in audits:
             if audit.klass:
                 resource_id = audit.uid
-                resource_endpoint = mapping.get(audit.klass).get("endpoint")
+                resource_endpoint = mapping.get(audit.klass, {}).get("endpoint")
+                if not resource_endpoint or not resource_id:
+                    continue
                 server = {"url": SERVER_DHIS2_URL, "auth": SERVER_DHIS2_AUTH,  "authType": constants.BASIC}
                 if resource_id:
                     object_data = get_resouce_object_data(server, resource_endpoint, resource_id)
-                    audit_object = AuditObject(auditId=audit.id, objectId=resource_id, objectData=object_data)
+                    audit_object = AuditObject(auditId=audit.id, objectId=resource_id, objectData=object_data, auditScope=audit.auditScope, auditType=audit.auditType)
                     audit_objects.append(audit_object)
         return audit_objects
     except Exception as e:

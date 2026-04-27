@@ -22,3 +22,8 @@ def get_since() -> str:
 def save_since() -> None:
     with open(CONTROL_FILE, "w") as f:
         json.dump({"since": datetime.now().strftime(DATE_FORMAT)[:-3]}, f)
+
+
+def format_timestamp(timestamp: str) -> str:
+    dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+    return dt.strftime("%Y-%m-%d %H_%M_%S")

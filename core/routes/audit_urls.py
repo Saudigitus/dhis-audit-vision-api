@@ -7,6 +7,7 @@ from core.models.models import Audit
 from fastapi import Request
 from core.auth.dependencies import get_current_user, require_superuser
 from core.auth.models import User
+from core.audit.audit_crud import AuditCRUD as  CustomAuditCRUD
 
 router = APIRouter()
 
@@ -28,8 +29,9 @@ def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: S
     # Grab all query params except pagination ones
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
-    result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters)
-    return {"pager": result["pager"], "audits": result["data"]}
+    custom_crud = CustomAuditCRUD(Audit)
+    result = custom_crud.get_latest_per_uid(db, page=page, pageSize=pageSize, filters=filters)
+    return result
 
 
 @router.delete("/{id}")

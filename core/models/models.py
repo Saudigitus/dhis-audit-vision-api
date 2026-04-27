@@ -36,3 +36,5 @@ class AuditObject(GenericModel):
     auditId = Column(String(11), nullable=False)
     objectId = Column(String, nullable=False)
     objectData = Column(JSON, nullable=False)
+    auditScope = Column(Enum(AuditScope), nullable=False)
+    auditType = Column(Enum(AuditType), nullable=False)

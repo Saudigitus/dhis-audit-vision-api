@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     ADMIN_USERNAME : str
     ADMIN_EMAIL : str
     ADMIN_PASSWORD : str
+    OFFSET_HOURS : int
 
     model_config = SettingsConfigDict(
         env_file=".env",

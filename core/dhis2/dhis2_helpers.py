@@ -42,11 +42,39 @@ def save_succes_log(index: int, response: dict) -> None:
     logger.info(f"Response data (chunk {index}): {response}")
 
 
-def get_audit_sql_view_data(server: dict, view_id: str) -> dict:
-    url = f"{server.get('url')}/api/sqlViews/{view_id}/data.json"
+def get_audit_sql_view_data(server: dict, view_id: str, since: str, offset_hours: int) -> dict:
     headers = generate_headers(server=server)
-    response = make_request(url=url, method=request_methods.GET, headers=headers)
-    return response
+    page = 1
+    page_size = 100
+    all_rows = []
+    result = {}
+
+    while True:
+        params = f"pageSize={page_size}&page={page}&var=since_datetime:{since}&var=offset_hours:{offset_hours}"
+        url = f"{server.get('url')}/api/sqlViews/{view_id}/data.json?{params}"
+        response = make_request(url=url, method=request_methods.GET, headers=headers)
+
+        if not result:
+            result = response  # capture full structure on first page
+
+        print(f"Total pages = {response.get('pager', {}).get('pageCount', 1)} - Fetched page {page} with {len(response.get('listGrid', {}).get('rows', []))} rows")
+
+        all_rows.extend(response.get("listGrid", {}).get("rows", []))
+
+        pager = response.get("pager", {})
+
+        if pager.get("page") >= pager.get("pageCount"):
+            break
+
+        page += 1
+
+    # update rows and pager with final accumulated data
+    result["listGrid"]["rows"] = all_rows
+    result["listGrid"]["height"] = len(all_rows)
+    result["pager"]["page"] = 1
+    result["pager"]["pageSize"] = len(all_rows)
+
+    return result
 
 
 def get_resouce_object_data(server: dict, resource: str, resource_id: str) -> dict:

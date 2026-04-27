@@ -37,7 +37,7 @@ def make_request(url: str, method: str = request_methods.GET, headers: dict = No
         return None
 
     except Exception as e:
-        print(f"Error during audit process: {e}")
+        print(f"Error during request: {e}")
         raise e
 
 
