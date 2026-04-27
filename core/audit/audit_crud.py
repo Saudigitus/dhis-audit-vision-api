@@ -32,5 +32,5 @@ class AuditCRUD(CRUDBase[Audit, AuditCreate, AuditRead]):
                 "pageSize": pageSize,
                 "total": total
             },
-            "data": data
+            "audits": data
         }
