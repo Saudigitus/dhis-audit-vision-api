@@ -5,6 +5,9 @@ from core.auth.router import router as auth_router
 import os
 import json
 from fastapi.middleware.cors import CORSMiddleware
+from core.audit.audit import AuditProcess
+
+
 
 app = FastAPI(title="FastAPI Project - DHIS2_AUDIT_VISION", version="1.0.0")
 
@@ -56,3 +59,10 @@ def list_logs(log: str):
         log_data = json.loads(f.read())
 
     return log_data
+
+
+@app.post("/api/runAudit")
+def run_audit_manualy():
+    audit_process = AuditProcess()
+    audit_process.run()
+    return {"message": "Audit process completed successfully."}
