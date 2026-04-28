@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     ADMIN_EMAIL : str
     ADMIN_PASSWORD : str
     OFFSET_HOURS : int
+    RETRIEVE_SQL_VIEW_ID : str
 
     model_config = SettingsConfigDict(
         env_file=".env",

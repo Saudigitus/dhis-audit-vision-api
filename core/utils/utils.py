@@ -25,5 +25,5 @@ def save_since() -> None:
 
 
 def format_timestamp(timestamp: str) -> str:
-    dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+    dt = datetime.strptime(timestamp.rstrip("Z"), "%Y-%m-%d %H:%M:%S.%f")
     return dt.strftime("%Y-%m-%d %H_%M_%S")

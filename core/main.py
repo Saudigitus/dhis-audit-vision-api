@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from core.routes.audit_object_urls import router as audit_object_router
 from core.routes.audit_urls import router as audit_router
+from core.routes.web_hook_urls import router as webhook_router
 from core.auth.router import router as auth_router
 import os
 import json
@@ -21,6 +22,7 @@ app.add_middleware(
 
 app.include_router(audit_router, prefix="/api/audits", tags=["Audits"])
 app.include_router(audit_object_router, prefix="/api/auditObjects", tags=["Audit Objects"])
+app.include_router(webhook_router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
 
 
