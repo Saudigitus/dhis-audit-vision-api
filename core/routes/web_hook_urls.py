@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.post("/dhis2/event")
-async def receive_dhis2_event_webhook(request: Request, _: User = Depends(require_superuser)):
+async def receive_dhis2_event_webhook(request: Request):
     """
     Webhook endpoint to receive events from DHIS2.
     """
