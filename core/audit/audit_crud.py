@@ -4,6 +4,7 @@ from core.schemas.schemas import AuditCreate, AuditRead
 from sqlalchemy.orm import Session
 from core.common.generics.crud_base import CRUDBase
 from core.models.models import Audit
+import math
 
 
 class AuditCRUD(CRUDBase[Audit, AuditCreate, AuditRead]):
@@ -30,7 +31,8 @@ class AuditCRUD(CRUDBase[Audit, AuditCreate, AuditRead]):
             "pager": {
                 "page": page,
                 "pageSize": pageSize,
-                "total": total
+                "total": total,
+                "pageCount": math.ceil(total / pageSize) if total else 0
             },
             "audits": data
         }
