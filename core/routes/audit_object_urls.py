@@ -38,12 +38,7 @@ def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: S
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
     result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters)
-    # data = sorted(result["data"], key=lambda x: x.created_at, reverse=True)
-    data = sorted(
-        result["data"],
-        key=lambda x: datetime.fromisoformat(x.created_at.replace("Z", "+00:00")),
-        reverse=True
-    )
+    data = sorted(result["data"], key=lambda x: x.created_at, reverse=True)    
     return {"pager": result["pager"], "auditObjects": data}
 
 
