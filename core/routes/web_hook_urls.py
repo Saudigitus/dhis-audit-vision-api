@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 import logging
-from core.auth.dependencies import get_current_user
+from core.auth.dependencies import get_current_user, require_superuser
 from fastapi import APIRouter, Depends
 from core.auth.models import User
 from core.audit.audit import AuditProcess
