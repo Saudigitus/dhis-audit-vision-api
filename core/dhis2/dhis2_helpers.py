@@ -101,3 +101,10 @@ def get_resources_mapping() -> dict:
     except Exception as e:
         print(f"Error loading resource mapping: {e}")
         raise e
+
+
+def retrieve_audit_sql_view_data(server: dict, view_id: str, resource_uid: str, created_at: str, offset_hours: int) -> dict:
+    headers = generate_headers(server=server)
+    params = f"var=resource_uid:{resource_uid}&var=created_at:{created_at}&var=offset_hours:{offset_hours}"
+    url = f"{server.get('url')}/api/sqlViews/{view_id}/data.json?{params}"
+    return make_request(url=url, method=request_methods.GET, headers=headers)
