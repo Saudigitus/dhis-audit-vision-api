@@ -108,3 +108,56 @@ def retrieve_audit_sql_view_data(server: dict, view_id: str, resource_uid: str, 
     params = f"var=resource_uid:{resource_uid}&var=created_at:{created_at}&var=offset_hours:{offset_hours}"
     url = f"{server.get('url')}/api/sqlViews/{view_id}/data.json?{params}"
     return make_request(url=url, method=request_methods.GET, headers=headers)
+
+
+def extract_all_ids(data: dict | list, seen: set = None) -> list[str]:
+    """
+    Recursively extracts all 'id' values from a nested dict/list structure.
+    Uses a set to avoid duplicates.
+    """
+    if seen is None:
+        seen = set()
+
+    if isinstance(data, dict):
+        if "id" in data and data["id"] not in seen:
+            seen.add(data["id"])
+        for value in data.values():
+            extract_all_ids(value, seen)
+
+    elif isinstance(data, list):
+        for item in data:
+            extract_all_ids(item, seen)
+
+    return list(seen)
+
+
+def get_dhis2_program(server: dict, program_id: str) -> dict:
+    headers = generate_headers(server=server)
+    url = f"{server.get('url')}/api/programs/{program_id}.json?fields=*"
+    return make_request(url=url, method=request_methods.GET, headers=headers)
+
+
+def get_dhis2_dataset(server: dict, dataset_id: str) -> dict:
+    headers = generate_headers(server=server)
+    url = f"{server.get('url')}/api/dataSets/{dataset_id}.json?fields=*"
+    return make_request(url=url, method=request_methods.GET, headers=headers)
+
+
+def get_program_dependants(server: dict, program_id: str) -> dict:
+    try:
+        program = get_dhis2_program(server, program_id)
+        all_ids = extract_all_ids(program)
+        return all_ids
+    except Exception as e:
+        print(f"Error fetching program dependants: {e}")
+        raise e
+
+
+def get_dataset_dependants(server: dict, dataset_id: str) -> dict:
+    try:
+        dataset = get_dhis2_dataset(server, dataset_id)
+        all_ids = extract_all_ids(dataset)
+        return all_ids
+    except Exception as e:
+        print(f"Error fetching dataset dependants: {e}")
+        raise e
