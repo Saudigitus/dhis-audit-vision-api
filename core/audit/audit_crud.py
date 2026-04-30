@@ -34,5 +34,5 @@ class AuditCRUD(CRUDBase[Audit, AuditCreate, AuditRead]):
                 "total": total,
                 "pageCount": math.ceil(total / pageSize) if total else 0
             },
-            "audits": data
+            "audits": sorted(data, key=lambda x: x.created_at, reverse=True)
         }
