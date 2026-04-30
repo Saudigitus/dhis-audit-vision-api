@@ -7,7 +7,7 @@ import os
 import json
 from fastapi.middleware.cors import CORSMiddleware
 from core.audit.audit import AuditProcess
-
+from core.notification.router import router as notification_router
 
 
 app = FastAPI(title="FastAPI Project - DHIS2_AUDIT_VISION", version="1.0.0")
@@ -24,6 +24,7 @@ app.include_router(audit_router, prefix="/api/audits", tags=["Audits"])
 app.include_router(audit_object_router, prefix="/api/auditObjects", tags=["Audit Objects"])
 app.include_router(webhook_router, prefix="/api/webhooks", tags=["Webhooks"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(notification_router, prefix="/api/notifications", tags=["Notifications"])
 
 
 @app.get("/")

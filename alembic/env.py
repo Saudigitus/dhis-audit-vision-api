@@ -8,6 +8,7 @@ from core.config import settings
 from core.db.base import Base
 from core.auth import models  # ensure models are imported
 from core.models import models  # ensure models are imported
+from core.notification import models  # ensure models are imported
 
 # 🔥 ensure .env is loaded
 load_dotenv()

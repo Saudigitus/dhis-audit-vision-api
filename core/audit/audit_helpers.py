@@ -10,7 +10,10 @@ import os
 from dotenv import load_dotenv
 from core.common.constants import constants
 from core.utils.id_generator import generate_custom_id
-
+from core.notification.models import NotificationConfig
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from core.notification.helpers import send_notification_email
 
 load_dotenv()
 
@@ -96,6 +99,7 @@ def save_audit_json(db: Session, payload: Dict,  batch_size: int = BATCH_SIZE) -
                 db.commit()
                 audit_objects = create_audit_objects_from_audit(batch_objects)
                 saved_data = save_audit_objects(db, audit_objects)
+                send_audit_notification(db, batch_objects)
                 success += len(batch_objects)
         except SQLAlchemyError as e:
             db.rollback()
@@ -162,3 +166,27 @@ def save_audit_objects(db: Session, audit_objects: List[AuditObject], batch_size
         "success": success,
         "failed": failed
     }
+
+
+def send_audit_notification(db: Session, audits: List[Audit]):
+    """Send notification based on audit data"""
+    print("Checking for notifications to send based on audits...")
+    for audit in audits:
+        context = {
+            "object": audit.uid,
+            "type":   audit.klass.split(".")[-1] if audit.klass else None,
+            "action": audit.auditType.value if audit.auditType else None,
+            "user":   audit.createdBy,
+            "time":   audit.created_at.strftime("%Y-%m-%d %H:%M") if audit.created_at else None,
+        }
+        query = select(NotificationConfig).where(
+            NotificationConfig.action == context["action"],
+            NotificationConfig.objectType == context["type"],
+        ).order_by(NotificationConfig.created_at.desc()).limit(1)
+
+        config = db.execute(query).scalar_one_or_none()
+
+        print(f"Found notification config: {config} for audit {audit.id}")
+
+        if config:
+            send_notification_email(config=config, context=context)
