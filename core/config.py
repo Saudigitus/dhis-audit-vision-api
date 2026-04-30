@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD : str
     OFFSET_HOURS : int
     RETRIEVE_SQL_VIEW_ID : str
+    EMAIL_HOST: str
+    EMAIL_PORT: int
+    EMAIL_HOST_USER: str
+    EMAIL_HOST_PASSWORD: str
+    EMAIL_USE_TLS: bool
+    EMAIL_USE_SSL: bool
+    
 
     model_config = SettingsConfigDict(
         env_file=".env",
