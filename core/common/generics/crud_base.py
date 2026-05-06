@@ -100,7 +100,7 @@ class CRUDBase(Generic[T, CreateSchema, ReadSchema]):
         search: Optional[str] = None,
         search_fields: Optional[list[str]] = None,
         order_by: Optional[str] = None,
-        order_desc: bool = False,
+        order_desc: bool = True,
     ) -> dict:
 
         query = self._build_query(filters, search, search_fields, order_by, order_desc)

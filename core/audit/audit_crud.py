@@ -9,24 +9,27 @@ import math
 
 class AuditCRUD(CRUDBase[Audit, AuditCreate, AuditRead]):
 
-    def get_latest_per_uid(self, db: Session, page: int = 1, pageSize: int = 50, filters: dict = None):
-        query = db.query(Audit)
+   def get_latest_per_uid(self, db: Session, page: int = 1, pageSize: int = 50, filters: dict = None):
+        base_query = db.query(Audit)
 
-        # filtros dinâmicos
         if filters:
             for field, value in filters.items():
                 if hasattr(Audit, field):
-                    query = query.filter(getattr(Audit, field) == value)
+                    base_query = base_query.filter(getattr(Audit, field) == value)
 
-        query = query.filter(Audit.uid.isnot(None))
+        base_query = base_query.filter(Audit.uid.isnot(None))
 
-        #  lógica principal de ordenação e distinct
-        query = query.order_by(Audit.uid, desc(Audit.created_at))
-        query = query.distinct(Audit.uid)
+        # ✅ Correct way for "latest per uid"
+        base_query = base_query.order_by(Audit.uid, desc(Audit.updated_at))
+        base_query = base_query.distinct(Audit.uid)
+        # Wrap to re-order globally
+        subquery = base_query.subquery()
+        query = db.query(subquery).order_by(desc(subquery.c.updated_at))
 
         total = query.count()
         data = query.offset((page - 1) * pageSize).limit(pageSize).all()
 
+        audits =  [dict(row._mapping) for row in data]
         return {
             "pager": {
                 "page": page,
@@ -34,5 +37,5 @@ class AuditCRUD(CRUDBase[Audit, AuditCreate, AuditRead]):
                 "total": total,
                 "pageCount": math.ceil(total / pageSize) if total else 0
             },
-            "audits": sorted(data, key=lambda x: x.created_at, reverse=True)
+            "audits": audits
         }

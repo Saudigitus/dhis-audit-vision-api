@@ -25,21 +25,12 @@ def get_audit_object(id: str, db: Session = Depends(get_db)):
     return audit_crud.get(db, id=id)
 
 
-# @router.get("")
-# def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db)):
-#     # Grab all query params except pagination ones
-#     excluded = {"page", "pageSize"}
-#     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
-#     result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters)
-#     return {"pager": result["pager"], "auditObjects": result["data"]}
-
 @router.get("")
 def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db)):
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
-    result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters)
-    data = sorted(result["data"], key=lambda x: x.created_at, reverse=True)    
-    return {"pager": result["pager"], "auditObjects": data}
+    result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters)    
+    return {"pager": result["pager"], "auditObjects": result["data"]}
 
 
 @router.delete("/{id}")
