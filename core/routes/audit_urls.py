@@ -41,7 +41,7 @@ def get_audit(id: str, db: Session = Depends(get_db), current_user: User = Depen
 
 
 @router.get("")
-def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db), current_user: User = Depends(require_superuser)):
+def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
     custom_crud = CustomAuditCRUD(Audit)

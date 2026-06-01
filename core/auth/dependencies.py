@@ -26,21 +26,14 @@ def get_current_user_token(token: str = Depends(oauth2_scheme), db: Session = De
     if not token:
         print("TOKEN IS EMPTY")
         return None
-
     try:
         payload = decode_token(token)
-
         username = payload.get("sub")
-        print("USERNAME:", username)
-
         user = user_crud.get_by_username(db, username)
-        print("USER FOUND:", user)
         if user:
             print("ACTIVE:", user.is_active)
             print("SUPERUSER:", user.is_superuser)
-
         return user
-
     except Exception as e:
         print("TOKEN ERROR:", str(e))
         return None
