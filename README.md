@@ -1,96 +1,95 @@
 # DHIS2_AUDIT_VISION
 
-Projecto para implementação de visualização de audits do DHIS2.
+Project for implementing DHIS2 audit visualization.
 
-## Execução com Docker
+## Running with Docker
 
-### 1. Configuração das variáveis de ambiente
+### 1. Configure the environment variables
 
-Crie o ficheiro `.env` e substitua os valores de exemplo necessários:
+Create the `.env` file and replace the required example values:
 
 ```sh
 cp .env.example .env
 ```
 
-### 2. Build e inicialização dos serviços
+### 2. Build and start the services
 
 ```sh
 docker compose up --build -d
 ```
 
-A API ficará disponível em `http://localhost:8000` e a documentação
-interactiva em `http://localhost:8000/docs`.
+The API will be available at `http://localhost:8000` and the interactive
+documentation at `http://localhost:8000/docs`.
 
-### 3. Execução das migrations
+### 3. Run the migrations
 
 ```sh
 docker compose exec api alembic upgrade head
 ```
 
-Para criar uma nova migration:
+To create a new migration:
 
 ```sh
-docker compose exec api alembic revision --autogenerate -m "Descrição da migration"
+docker compose exec api alembic revision --autogenerate -m "Migration description"
 ```
 
-### 4. Criação do super-utilizador
+### 4. Create the superuser
 
 ```sh
 docker compose exec api python commands.py seed-superuser
 ```
 
-### 5. Logs e encerramento
+### 5. View logs and stop the services
 
 ```sh
 docker compose logs -f api
 docker compose down
 ```
 
-Os dados do PostgreSQL, os ficheiros de auditoria e os logs são persistidos
-em volumes Docker.
+The PostgreSQL data, audit files, and logs are persisted in Docker volumes.
 
-## Execução local
+## Running locally
 
-### 1. Criação do ambiente virtual
+### 1. Create the virtual environment
 ```sh
 python -m venv .venv
 ```
 
-### 2. Activação do ambiente virtual
+### 2. Activate the virtual environment
 
-No Windows:
+On Windows:
 
 ```sh
 . .venv/Scripts/activate
 ```
 
-### 3. Instalação dependências
+### 3. Install the dependencies
 ```sh
 pip install -r requirements.txt
 ```
 
-### 4. Actualização das variáveis de ambiente
+### 4. Configure the environment variables
 
-Crie o ficheiro `.env` na raiz do projecto a partir de `.env.example`.
+Create the `.env` file in the project root from `.env.example`.
 
-### 5. Executar migração da base de dados
+### 5. Run the database migrations
 
-#### 5.1. Criação das migrations
+#### 5.1. Create a migration
 ```sh
-alembic revision --autogenerate -m "Descrição da migration"
+alembic revision --autogenerate -m "Migration description"
 ```
 
-#### 5.2. Aplicar as migrations
+#### 5.2. Apply the migrations
 ```sh
 alembic upgrade head
 ```
 
-#### 5.3. Criar o super-utilizador
+#### 5.3. Create the superuser
 ```sh
 python commands.py seed-superuser
 ```
 
-### 6. Inicialização do servidor
+### 6. Start the server
 ```sh
 python runserver.py
 ```
