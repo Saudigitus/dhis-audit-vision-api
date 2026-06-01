@@ -7,7 +7,9 @@ import os
 from core.auth.security import hash_password
 from dotenv import load_dotenv
 import traceback
-load_dotenv()  # Carrega as variáveis de ambiente do arquivo .env
+from core.auth.security import create_access_token
+
+load_dotenv()
 
 app = typer.Typer(invoke_without_command=False)
 
@@ -29,7 +31,11 @@ def seed_superuser():
     """Seed the database with a default superuser"""
     db = SessionLocal()
     try:
-        if get_by_username(db, "admin"):
+        user=get_by_username(db, os.getenv("ADMIN_USERNAME"))
+        if user:
+            access_token = create_access_token(data={"sub": user.username, "is_superuser": user.is_superuser})
+            print(f"Superuser created: {user.username} / {user.email}")
+            print(f"Token: {access_token}")
             print("Superuser already exists.")
             return
         user = create(db, UserCreate(
@@ -38,7 +44,10 @@ def seed_superuser():
             password=os.getenv("ADMIN_PASSWORD"),
             is_superuser=True,
         ))
+        access_token = create_access_token(data={"sub": user.username, "is_superuser": user.is_superuser})
         print(f"Superuser created: {user.username} / {user.email}")
+        print(f"Token: {access_token}")
+
     except Exception as e:
         print(f"Error seeding superuser: {e}")
     finally:
