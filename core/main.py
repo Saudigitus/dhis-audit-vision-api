@@ -29,7 +29,7 @@ app.include_router(notification_router, prefix="/api/notifications", tags=["Noti
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the FastAPI Project - Integration of dhis2 and xAPI!"}
+    return {"message": "Welcome to the DHIS2 Audit Vision API!"}
 
 
 @app.get("/api/endpoints/")

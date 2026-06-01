@@ -48,8 +48,6 @@ htmlcov/
 Thumbs.db
 ehthumbs.db
 
-alembic/versions
-
 # logs for erros
 logs/
 
