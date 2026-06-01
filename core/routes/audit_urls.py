@@ -31,18 +31,17 @@ audit_crud = CRUDBase[Audit, AuditCreate, AuditRead](Audit)
 
 
 @router.post("/create/", response_model=AuditRead)
-def upsert_audit(payload: AuditCreate, db: Session = Depends(get_db)):
+def upsert_audit(payload: AuditCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return audit_crud.create(db, payload_in=payload)
 
 
 @router.get("/{id}", response_model=AuditRead)
-def get_audit(id: str, db: Session = Depends(get_db)):
+def get_audit(id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return audit_crud.get(db, id=id)
 
 
 @router.get("")
-def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db)):
-    # Grab all query params except pagination ones
+def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db), current_user: User = Depends(require_superuser)):
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
     custom_crud = CustomAuditCRUD(Audit)
@@ -51,13 +50,13 @@ def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: S
 
 
 @router.delete("/{id}")
-def delete_audit(id: str, db: Session = Depends(get_db)):
+def delete_audit(id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     audit_crud.delete(db, id=id)
     return {"message": "audit deleted"}
 
 
 @router.get("/metadata/{id}")
-def get_audit_by_program_and_dataset_id(request: Request,   id: str, type: MetadataType = Query(..., description="PROGRAM ou DATASET"), page: int = 1, pageSize: int = 50, db: Session = Depends(get_db)):
+def get_audit_by_program_and_dataset_id(request: Request,   id: str, type: MetadataType = Query(..., description="PROGRAM ou DATASET"), page: int = 1, pageSize: int = 50, db: Session = Depends(get_db), current_user: User = Depends(require_superuser)):
     server = {"url": SERVER_DHIS2_URL, "auth": SERVER_DHIS2_AUTH, "authType": constants.BASIC}
 
     try:

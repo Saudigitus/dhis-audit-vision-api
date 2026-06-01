@@ -5,7 +5,7 @@ from fastapi import Depends, APIRouter
 from core.common.generics.crud_base import CRUDBase
 from core.models.models import AuditObject
 from fastapi import Request
-from core.auth.dependencies import get_current_user, require_superuser
+from core.auth.dependencies import get_current_user
 from core.auth.models import User
 from datetime import datetime
 
@@ -16,17 +16,17 @@ audit_crud = CRUDBase[AuditObject, AuditObjectCreate, AuditObjectRead](AuditObje
 
 
 @router.post("/create/", response_model=AuditObjectRead)
-def upsert_audit_object(payload: AuditObjectCreate, db: Session = Depends(get_db)):
+def upsert_audit_object(payload: AuditObjectCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return audit_crud.create(db, payload_in=payload)
 
 
 @router.get("/{id}", response_model=AuditObjectRead)
-def get_audit_object(id: str, db: Session = Depends(get_db)):
+def get_audit_object(id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return audit_crud.get(db, id=id)
 
 
 @router.get("")
-def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db)):
+def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
     result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters)    
@@ -34,6 +34,6 @@ def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: S
 
 
 @router.delete("/{id}")
-def delete_audit_object(id: str, db: Session = Depends(get_db)):
+def delete_audit_object(id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     audit_crud.delete(db, id=id)
     return {"message": "audit object deleted"}

@@ -7,7 +7,7 @@ from core.auth.security import verify_password, decode_token
 from core.auth.models import User
 import core.auth.crud as user_crud
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 basic_scheme = HTTPBasic(auto_error=False)
 
 
@@ -21,19 +21,28 @@ def _require_active(user: User | None) -> User:
 
 # --- Bearer Token ---
 
-def get_current_user_token(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-) -> User | None:
+def get_current_user_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User | None:
+
     if not token:
+        print("TOKEN IS EMPTY")
         return None
+
     try:
         payload = decode_token(token)
-        username: str = payload.get("sub")
-        if not username:
-            return None
-        return user_crud.get_by_username(db, username)
-    except JWTError:
+
+        username = payload.get("sub")
+        print("USERNAME:", username)
+
+        user = user_crud.get_by_username(db, username)
+        print("USER FOUND:", user)
+        if user:
+            print("ACTIVE:", user.is_active)
+            print("SUPERUSER:", user.is_superuser)
+
+        return user
+
+    except Exception as e:
+        print("TOKEN ERROR:", str(e))
         return None
 
 

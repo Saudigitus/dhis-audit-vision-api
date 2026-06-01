@@ -19,10 +19,8 @@ class AuditCRUD(CRUDBase[Audit, AuditCreate, AuditRead]):
 
         base_query = base_query.filter(Audit.uid.isnot(None))
 
-        # ✅ Correct way for "latest per uid"
         base_query = base_query.order_by(Audit.uid, desc(Audit.updated_at))
         base_query = base_query.distinct(Audit.uid)
-        # Wrap to re-order globally
         subquery = base_query.subquery()
         query = db.query(subquery).order_by(desc(subquery.c.updated_at))
 
