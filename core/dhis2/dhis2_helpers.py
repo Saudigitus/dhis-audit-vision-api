@@ -7,10 +7,9 @@ from dotenv import load_dotenv
 from core.common.constants import constants, request_methods
 import json
 import requests
-
-import urllib3
-# Desabilita apenas o aviso de certificado não verificado
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import re
+from datetime import datetime, timezone
+from core.common.config import get_dhis2_tls_verify
 
 
 load_dotenv()
@@ -19,27 +18,45 @@ os.makedirs("logs", exist_ok=True)
 
 
 DATA_BASE_DIR = os.getenv("DATA_BASE_DIR", "./data")
+DHIS2_UID_PATTERN = re.compile(r"^[A-Za-z0-9]{11}$")
+DHIS2_TIMESTAMP_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}_\d{2}_\d{2}$")
+
+
+def _validate_offset_hours(offset_hours: int) -> int:
+    if isinstance(offset_hours, bool) or not isinstance(offset_hours, int) or not 0 <= offset_hours <= 168:
+        raise ValueError("offset_hours must be an integer between 0 and 168")
+    return offset_hours
+
+
+def _timestamp_to_epoch(timestamp: str) -> int:
+    _validate_timestamp(timestamp)
+    parsed = datetime.strptime(timestamp, "%Y-%m-%d %H_%M_%S").replace(tzinfo=timezone.utc)
+    return int(parsed.timestamp())
+
+
+def _validate_timestamp(timestamp: str) -> str:
+    if not DHIS2_TIMESTAMP_PATTERN.fullmatch(timestamp):
+        raise ValueError("timestamp has an invalid format")
+    return timestamp
+
+
+def _validate_resource_uid(resource_uid: str) -> str:
+    if not DHIS2_UID_PATTERN.fullmatch(resource_uid):
+        raise ValueError("resource_uid must be an 11-character DHIS2 UID")
+    return resource_uid
 
 
 def save_erro_log(exception: Exception, index: int, chunk: dict) -> None:
     logging.basicConfig(filename='logs/load_event_errors.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
 
-    logger.error(f"Chunk {index} failed: {str(exception)} || Failed data (chunk {index}): {chunk}")
-    response_data = None
-    if exception.response is not None:
-        try:
-            response_data = exception.response.json()
-        except ValueError:
-            response_data = exception.text
-
-    logger.error(f"Error response for (chunk {index}): {response_data}")
+    logger.error("Chunk %s failed with %s", index, type(exception).__name__)
 
 
 def save_succes_log(index: int, response: dict) -> None:
     logging.basicConfig(filename='logs/load_event_success.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
-    logger.info(f"Response data (chunk {index}): {response}")
+    logger.info("Chunk %s loaded successfully", index)
 
 
 def get_audit_sql_view_data(server: dict, view_id: str, since: str, offset_hours: int) -> dict:
@@ -50,9 +67,14 @@ def get_audit_sql_view_data(server: dict, view_id: str, since: str, offset_hours
     result = {}
 
     while True:
-        params = f"pageSize={page_size}&page={page}&var=since_datetime:{since}&var=offset_hours:{offset_hours}"
-        url = f"{server.get('url')}/api/sqlViews/{view_id}/data.json?{params}"
-        response = make_request(url=url, method=request_methods.GET, headers=headers)
+        params = [
+            ("pageSize", page_size),
+            ("page", page),
+            ("var", f"since_epoch:{_timestamp_to_epoch(since)}"),
+            ("var", f"offset_hours:{_validate_offset_hours(offset_hours)}"),
+        ]
+        url = f"{server.get('url')}/api/sqlViews/{view_id}/data.json"
+        response = make_request(url=url, method=request_methods.GET, headers=headers, params=params)
 
         if not result:
             result = response  # capture full structure on first page
@@ -82,7 +104,7 @@ def get_resouce_object_data(server: dict, resource: str, resource_id: str) -> di
         url = f"{server.get('url')}/api/{resource}/{resource_id}.json?fields=*"
         print(f"Fetching data from URL: {url}")
         headers = generate_headers(server=server)
-        response = requests.get(url, headers=headers, verify=False)
+        response = requests.get(url, headers=headers, verify=get_dhis2_tls_verify())
         if response.status_code == 404:
             print(f"Resource not found at URL: {url}")
             return {}
@@ -105,9 +127,13 @@ def get_resources_mapping() -> dict:
 
 def retrieve_audit_sql_view_data(server: dict, view_id: str, resource_uid: str, created_at: str, offset_hours: int) -> dict:
     headers = generate_headers(server=server)
-    params = f"var=resource_uid:{resource_uid}&var=created_at:{created_at}&var=offset_hours:{offset_hours}"
-    url = f"{server.get('url')}/api/sqlViews/{view_id}/data.json?{params}"
-    return make_request(url=url, method=request_methods.GET, headers=headers)
+    params = [
+        ("var", f"resource_uid:{_validate_resource_uid(resource_uid)}"),
+        ("var", f"created_at:{_validate_timestamp(created_at)}"),
+        ("var", f"offset_hours:{_validate_offset_hours(offset_hours)}"),
+    ]
+    url = f"{server.get('url')}/api/sqlViews/{view_id}/data.json"
+    return make_request(url=url, method=request_methods.GET, headers=headers, params=params)
 
 
 def extract_all_ids(data: dict | list, seen: set = None) -> list[str]:

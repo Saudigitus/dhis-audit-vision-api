@@ -4,10 +4,7 @@ import requests
 import isodate
 from sqlalchemy.orm import Session
 from core.db.session import SessionLocal
-
-import urllib3
-# Desabilita apenas o aviso de certificado não verificado
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from core.common.config import get_dhis2_tls_verify
 
 db = SessionLocal()
 
@@ -16,21 +13,22 @@ def make_hash(list: list, key: str) -> dict:
     return {item[key]: item for item in list}
 
 
-def make_request(url: str, method: str = request_methods.GET, headers: dict = None, payload: dict = None) -> dict:
+def make_request(url: str, method: str = request_methods.GET, headers: dict = None, payload: dict = None, params=None) -> dict:
     try:
+        verify = get_dhis2_tls_verify()
 
         if method == request_methods.POST:
-            response = requests.post(url, headers=headers, data=json.dumps(payload), verify=False)
+            response = requests.post(url, headers=headers, data=json.dumps(payload), params=params, verify=verify)
             response.raise_for_status()
             return response.json()
 
         if method == request_methods.GET:
-            response = requests.get(url, headers=headers, verify=False)
+            response = requests.get(url, headers=headers, params=params, verify=verify)
             response.raise_for_status()
             return response.json()
 
         if method == request_methods.PUT:
-            response = requests.put(url, headers=headers, data=json.dumps(payload), verify=False)
+            response = requests.put(url, headers=headers, data=json.dumps(payload), params=params, verify=verify)
             response.raise_for_status()
             return response.json()
 
@@ -148,5 +146,4 @@ def get_value(data: dict, path: str, mapping: dict):
 
     value = get_value_from_path(data=data, path=path)
     return get_value_from_mapping(value=value, mapping=mapping)
-
 

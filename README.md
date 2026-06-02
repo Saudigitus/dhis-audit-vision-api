@@ -12,6 +12,14 @@ Create the `.env` file and replace the required example values:
 cp .env.example .env
 ```
 
+Set `CORS_ALLOW_ORIGINS` to the comma-separated browser origins that may call
+the API. Wildcard origins are rejected. If the DHIS2 server uses a private CA,
+set `DHIS2_CA_BUNDLE` to its certificate bundle path.
+
+The DHIS2 webhook must send valid API Basic Auth or Bearer credentials. Deploy
+the updated `dhis_query_view.sql` definition in DHIS2 as well; it now receives
+the validated integer variable `since_epoch`.
+
 ### 2. Build and start the services
 
 ```sh

@@ -6,15 +6,16 @@ from core.utils.utils import get_since, save_since, format_timestamp
 from core.common.constants import constants
 from core.audit.audit_helpers import save_audit_json
 from core.db.session import SessionLocal
+from core.common.config import get_required_env
 
 
 db = SessionLocal()
 load_dotenv()
 
 
-SERVER_DHIS2_URL = os.getenv("SERVER_DHIS2_URL", "https://play.im.dhis2.org/stable-2-41-8")
-SERVER_DHIS2_AUTH = os.getenv("SERVER_DHIS2_AUTH", "YWRtaW46ZGlzdHJpY3Q=")
-SQL_VIEW_ID = os.getenv("SQL_VIEW_ID", "k7RGz4qMNXk")
+SERVER_DHIS2_URL = get_required_env("SERVER_DHIS2_URL")
+SERVER_DHIS2_AUTH = get_required_env("SERVER_DHIS2_AUTH")
+SQL_VIEW_ID = get_required_env("SQL_VIEW_ID")
 DATA_BASE_DIR = os.getenv("DATA_BASE_DIR", "/data")
 OFFSET_HOURS = int(os.getenv("OFFSET_HOURS", "2"))
 

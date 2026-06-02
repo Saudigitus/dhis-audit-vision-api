@@ -20,9 +20,10 @@ import os
 from sqlalchemy import func
 import math
 from requests.exceptions import HTTPError
+from core.common.config import get_required_env
 
-SERVER_DHIS2_URL = os.getenv("SERVER_DHIS2_URL", "https://play.im.dhis2.org/stable-2-41-8")
-SERVER_DHIS2_AUTH = os.getenv("SERVER_DHIS2_AUTH", "YWRtaW46ZGlzdHJpY3Q=")
+SERVER_DHIS2_URL = get_required_env("SERVER_DHIS2_URL")
+SERVER_DHIS2_AUTH = get_required_env("SERVER_DHIS2_AUTH")
 
 router = APIRouter()
 load_dotenv()

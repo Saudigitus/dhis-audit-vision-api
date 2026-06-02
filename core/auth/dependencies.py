@@ -1,7 +1,6 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
-from jose import JWTError
 from core.db.dependencies import get_db
 from core.auth.security import verify_password, decode_token
 from core.auth.models import User
@@ -24,18 +23,13 @@ def _require_active(user: User | None) -> User:
 def get_current_user_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User | None:
 
     if not token:
-        print("TOKEN IS EMPTY")
         return None
     try:
         payload = decode_token(token)
         username = payload.get("sub")
         user = user_crud.get_by_username(db, username)
-        if user:
-            print("ACTIVE:", user.is_active)
-            print("SUPERUSER:", user.is_superuser)
         return user
-    except Exception as e:
-        print("TOKEN ERROR:", str(e))
+    except Exception:
         return None
 
 

@@ -14,11 +14,12 @@ from core.notification.models import NotificationConfig
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from core.notification.helpers import send_notification_email
+from core.common.config import get_required_env
 
 load_dotenv()
 
-SERVER_DHIS2_URL = os.getenv("SERVER_DHIS2_URL", "https://play.im.dhis2.org/stable-2-41-8")
-SERVER_DHIS2_AUTH = os.getenv("SERVER_DHIS2_AUTH", "YWRtaW46ZGlzdHJpY3Q=")
+SERVER_DHIS2_URL = get_required_env("SERVER_DHIS2_URL")
+SERVER_DHIS2_AUTH = get_required_env("SERVER_DHIS2_AUTH")
 BATCH_SIZE = 50
 
 

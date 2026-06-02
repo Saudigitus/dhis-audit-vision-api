@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from core.routes.audit_object_urls import router as audit_object_router
 from core.routes.audit_urls import router as audit_router
 from core.routes.web_hook_urls import router as webhook_router
@@ -8,17 +8,24 @@ import json
 from fastapi.middleware.cors import CORSMiddleware
 from core.audit.audit import AuditProcess
 from core.notification.router import router as notification_router
+from core.auth.dependencies import require_superuser
+from core.auth.models import User
+from pathlib import Path
 
 
 app = FastAPI(title="FastAPI Project - DHIS2_AUDIT_VISION", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_origins = [origin.strip() for origin in os.getenv("CORS_ALLOW_ORIGINS", "").split(",") if origin.strip()]
+if "*" in cors_origins:
+    raise RuntimeError("CORS_ALLOW_ORIGINS must list explicit origins; wildcard origins are not allowed")
+if cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(audit_router, prefix="/api/audits", tags=["Audits"])
 app.include_router(audit_object_router, prefix="/api/auditObjects", tags=["Audit Objects"])
@@ -47,25 +54,25 @@ def list_endpoints():
 
 
 @app.get("/api/logs")
-def list_logs():
+def list_logs(_: User = Depends(require_superuser)):
     logs = os.listdir("logs")
 
     return {'logs': logs}
 
 
 @app.get("/api/logs/{log}")
-def list_logs(log: str):
-
-    log_data = None
-
-    with open(f"logs/{log}.txt", "r") as f:
+def get_log(log: str, _: User = Depends(require_superuser)):
+    if not log.replace("_", "").replace("-", "").isalnum():
+        raise HTTPException(status_code=400, detail="Invalid log name")
+    log_path = Path("logs") / f"{log}.txt"
+    with log_path.open("r") as f:
         log_data = json.loads(f.read())
 
     return log_data
 
 
 @app.post("/api/runAudit")
-def run_audit_manualy():
+def run_audit_manualy(_: User = Depends(require_superuser)):
     audit_process = AuditProcess()
     audit_process.run()
     return {"message": "Audit process completed successfully."}
