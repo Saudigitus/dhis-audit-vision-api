@@ -29,7 +29,7 @@ def get_audit_object(id: str, db: Session = Depends(get_db), current_user: User 
 def get_audit_objects(request: Request, page: int = 1, pageSize: int = 50, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     excluded = {"page", "pageSize"}
     filters = {k: v for k, v in request.query_params.items() if k not in excluded}
-    result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters)    
+    result = audit_crud.get_all(db, page=page, pageSize=pageSize, filters=filters, order_by="created_at")
     return {"pager": result["pager"], "auditObjects": result["data"]}
 
 
