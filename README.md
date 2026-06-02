@@ -39,6 +39,9 @@ docker compose exec api alembic revision --autogenerate -m "Migration descriptio
 docker compose exec api python commands.py seed-superuser
 ```
 
+This command creates the configured admin user if it does not exist and prints
+a new access token every time it runs.
+
 ### 5. View logs and stop the services
 
 ```sh
@@ -88,6 +91,9 @@ alembic upgrade head
 ```sh
 python commands.py seed-superuser
 ```
+
+This command creates the configured admin user if it does not exist and prints
+a new access token every time it runs.
 
 ### 6. Start the server
 ```sh

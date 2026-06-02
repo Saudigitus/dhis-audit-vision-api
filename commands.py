@@ -4,9 +4,10 @@ import typer
 from core.db.session import SessionLocal
 from core.audit.audit import AuditProcess
 import os
-from core.auth.security import hash_password
+from core.auth.security import create_access_token
 from dotenv import load_dotenv
 import traceback
+import uuid
 load_dotenv()  # Carrega as variáveis de ambiente do arquivo .env
 
 app = typer.Typer(invoke_without_command=False)
@@ -26,19 +27,25 @@ def start_audit():
 
 @app.command("seed-superuser")
 def seed_superuser():
-    """Seed the database with a default superuser"""
+    """Seed the database with a default superuser and generate an access token"""
     db = SessionLocal()
     try:
-        if get_by_username(db, "admin"):
-            print("Superuser already exists.")
-            return
-        user = create(db, UserCreate(
-            username=os.getenv("ADMIN_USERNAME"),
-            email=os.getenv("ADMIN_EMAIL"),
-            password=os.getenv("ADMIN_PASSWORD"),
-            is_superuser=True,
-        ))
-        print(f"Superuser created: {user.username} / {user.email}")
+        admin_username = os.getenv("ADMIN_USERNAME")
+        user = get_by_username(db, admin_username)
+
+        if user:
+            print(f"Superuser already exists: {user.username} / {user.email}")
+        else:
+            user = create(db, UserCreate(
+                username=admin_username,
+                email=os.getenv("ADMIN_EMAIL"),
+                password=os.getenv("ADMIN_PASSWORD"),
+                is_superuser=True,
+            ))
+            print(f"Superuser created: {user.username} / {user.email}")
+
+        token = create_access_token({"sub": user.username, "jti": str(uuid.uuid4())})
+        print(f"Access token: {token}")
     except Exception as e:
         print(f"Error seeding superuser: {e}")
     finally:
