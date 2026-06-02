@@ -4,9 +4,10 @@ from core.db.dependencies import get_db
 from core.common.generics.crud_base import CRUDBase
 from core.notification.schemas import NotificationConfigCreate, NotificationConfigRead
 from core.notification.models import NotificationConfig
+from core.auth.dependencies import get_current_user
 from typing import Optional
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 notification_crud = CRUDBase[NotificationConfig, NotificationConfigCreate, NotificationConfigRead](NotificationConfig)
 
 
