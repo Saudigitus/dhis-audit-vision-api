@@ -1,5 +1,6 @@
 import pytest
 
+from core.auth.dependencies import _extract_authorization_token
 from core.dhis2.dhis2_helpers import (
     _timestamp_to_epoch,
     _validate_offset_hours,
@@ -20,6 +21,22 @@ def test_audit_trigger_requires_superuser():
 
 def test_webhook_requires_authentication():
     assert "get_current_user" in _dependency_names("/api/webhooks/dhis2/event", "POST")
+
+
+@pytest.mark.parametrize(
+    ("authorization", "expected"),
+    [
+        ("Bearer jwt-token", "jwt-token"),
+        ("ApiToken jwt-token", "jwt-token"),
+        ("apitoken jwt-token", "jwt-token"),
+        ("Basic abc123", None),
+        ("jwt-token", None),
+        ("Bearer   ", None),
+        (None, None),
+    ],
+)
+def test_authorization_token_accepts_bearer_and_dhis2_apitoken(authorization, expected):
+    assert _extract_authorization_token(authorization) == expected
 
 
 @pytest.mark.parametrize(
