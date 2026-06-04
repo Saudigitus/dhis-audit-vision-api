@@ -1,28 +1,13 @@
-from fastapi import Depends, Header, HTTPException
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer, HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 from core.db.dependencies import get_db
 from core.auth.security import verify_password, decode_token
 from core.auth.models import User
 import core.auth.crud as user_crud
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 basic_scheme = HTTPBasic(auto_error=False)
-
-
-def _extract_authorization_token(authorization: str | None) -> str | None:
-    if not authorization:
-        return None
-
-    try:
-        scheme, token = authorization.split(" ", 1)
-    except ValueError:
-        return None
-
-    if scheme.lower() not in {"bearer", "apitoken"}:
-        return None
-
-    token = token.strip()
-    return token or None
 
 
 def _require_active(user: User | None) -> User:
@@ -33,14 +18,10 @@ def _require_active(user: User | None) -> User:
     return user
 
 
-# --- Bearer / DHIS2 ApiToken ---
+# --- Bearer Token ---
 
-def get_current_user_token(
-    authorization: str | None = Header(default=None),
-    db: Session = Depends(get_db),
-) -> User | None:
+def get_current_user_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User | None:
 
-    token = _extract_authorization_token(authorization)
     if not token:
         return None
     try:
