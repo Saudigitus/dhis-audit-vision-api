@@ -1,11 +1,11 @@
 import json
 import os
 import logging
+from pathlib import Path
 from core.common.utils import make_request, generate_headers
 from core.common.constants import request_methods
 from dotenv import load_dotenv
 from core.common.constants import constants, request_methods
-import json
 import requests
 import re
 from datetime import datetime, timezone
@@ -18,6 +18,45 @@ os.makedirs("logs", exist_ok=True)
 
 
 DATA_BASE_DIR = os.getenv("DATA_BASE_DIR", "./data")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RESOURCE_MAPPING_FILENAMES = (
+    "klass_resource_mapping.json",
+    "klass_resouce_mapping.json",
+)
+DEFAULT_RESOURCE_MAPPING = {
+    "org.hisp.dhis.category.Category": {"endpoint": "categories"},
+    "org.hisp.dhis.category.CategoryCombo": {"endpoint": "categoryCombos"},
+    "org.hisp.dhis.category.CategoryOption": {"endpoint": "categoryOptions"},
+    "org.hisp.dhis.category.CategoryOptionCombo": {"endpoint": "categoryOptionCombos"},
+    "org.hisp.dhis.chart.Chart": {"endpoint": "charts"},
+    "org.hisp.dhis.dashboard.Dashboard": {"endpoint": "dashboards"},
+    "org.hisp.dhis.dataelement.DataElement": {"endpoint": "dataElements"},
+    "org.hisp.dhis.dataelement.DataElementGroup": {"endpoint": "dataElementGroups"},
+    "org.hisp.dhis.dataelement.DataElementGroupSet": {"endpoint": "dataElementGroupSets"},
+    "org.hisp.dhis.dataset.DataSet": {"endpoint": "dataSets"},
+    "org.hisp.dhis.document.Document": {"endpoint": "documents"},
+    "org.hisp.dhis.indicator.Indicator": {"endpoint": "indicators"},
+    "org.hisp.dhis.indicator.IndicatorGroup": {"endpoint": "indicatorGroups"},
+    "org.hisp.dhis.indicator.IndicatorGroupSet": {"endpoint": "indicatorGroupSets"},
+    "org.hisp.dhis.legend.LegendSet": {"endpoint": "legendSets"},
+    "org.hisp.dhis.option.Option": {"endpoint": "options"},
+    "org.hisp.dhis.option.OptionSet": {"endpoint": "optionSets"},
+    "org.hisp.dhis.organisationunit.OrganisationUnit": {"endpoint": "organisationUnits"},
+    "org.hisp.dhis.organisationunit.OrganisationUnitGroup": {"endpoint": "organisationUnitGroups"},
+    "org.hisp.dhis.organisationunit.OrganisationUnitGroupSet": {"endpoint": "organisationUnitGroupSets"},
+    "org.hisp.dhis.program.Program": {"endpoint": "programs"},
+    "org.hisp.dhis.program.ProgramIndicator": {"endpoint": "programIndicators"},
+    "org.hisp.dhis.program.ProgramRule": {"endpoint": "programRules"},
+    "org.hisp.dhis.program.ProgramRuleVariable": {"endpoint": "programRuleVariables"},
+    "org.hisp.dhis.program.ProgramStage": {"endpoint": "programStages"},
+    "org.hisp.dhis.program.ProgramStageDataElement": {"endpoint": "programStageDataElements"},
+    "org.hisp.dhis.relationship.RelationshipType": {"endpoint": "relationshipTypes"},
+    "org.hisp.dhis.report.Report": {"endpoint": "reports"},
+    "org.hisp.dhis.trackedentity.TrackedEntityType": {"endpoint": "trackedEntityTypes"},
+    "org.hisp.dhis.user.User": {"endpoint": "users"},
+    "org.hisp.dhis.user.UserGroup": {"endpoint": "userGroups"},
+    "org.hisp.dhis.validation.ValidationRule": {"endpoint": "validationRules"},
+}
 DHIS2_UID_PATTERN = re.compile(r"^[A-Za-z0-9]{11}$")
 DHIS2_TIMESTAMP_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}_\d{2}_\d{2}$")
 
@@ -44,6 +83,18 @@ def _validate_resource_uid(resource_uid: str) -> str:
     if not DHIS2_UID_PATTERN.fullmatch(resource_uid):
         raise ValueError("resource_uid must be an 11-character DHIS2 UID")
     return resource_uid
+
+
+def _resolve_data_base_dir() -> Path:
+    configured_dir = Path(DATA_BASE_DIR)
+    if configured_dir.is_absolute():
+        return configured_dir
+    return PROJECT_ROOT / configured_dir
+
+
+def _resource_mapping_paths() -> list[Path]:
+    data_dir = _resolve_data_base_dir()
+    return [data_dir / filename for filename in RESOURCE_MAPPING_FILENAMES]
 
 
 def save_erro_log(exception: Exception, index: int, chunk: dict) -> None:
@@ -116,13 +167,21 @@ def get_resouce_object_data(server: dict, resource: str, resource_id: str) -> di
 
 
 def get_resources_mapping() -> dict:
-    try:
-        with open(f"{DATA_BASE_DIR}/klass_resouce_mapping.json", "r") as f:
-            mapping = json.load(f)
-        return mapping
-    except Exception as e:
-        print(f"Error loading resource mapping: {e}")
-        raise e
+    for mapping_path in _resource_mapping_paths():
+        try:
+            with mapping_path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            continue
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Resource mapping file is invalid JSON: {mapping_path}") from e
+
+    print(
+        "Resource mapping file not found. "
+        f"Checked: {', '.join(str(path) for path in _resource_mapping_paths())}. "
+        "Using built-in DHIS2 mapping."
+    )
+    return DEFAULT_RESOURCE_MAPPING
 
 
 def retrieve_audit_sql_view_data(server: dict, view_id: str, resource_uid: str, created_at: str, offset_hours: int) -> dict:
