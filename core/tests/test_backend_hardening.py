@@ -88,6 +88,30 @@ def test_webhook_accepts_configured_static_api_token(monkeypatch):
     assert get_webhook_auth(request=request, db=FakeDB(), token_user=None, basic_user=None) is None
 
 
+def test_webhook_accepts_dhis2_pat_when_dhis2_validates_it(monkeypatch):
+    token = "d2pat_abcdefghijklmnopqrstuvwxyz1234567890"
+    monkeypatch.setattr(settings, "WEBHOOK_API_TOKEN", None)
+    request = Request(
+        {
+            "type": "http",
+            "headers": [(b"authorization", f"ApiToken {token}".encode("ascii"))],
+        }
+    )
+
+    class FakeResponse:
+        status_code = 200
+
+    def fake_get(url, headers, timeout, verify):
+        assert url.endswith("/api/me")
+        assert headers["Authorization"] == f"ApiToken {token}"
+        assert timeout == 10
+        return FakeResponse()
+
+    monkeypatch.setattr("core.auth.dependencies.requests.get", fake_get)
+
+    assert get_webhook_auth(request=request, db=FakeDB(), token_user=None, basic_user=None) is None
+
+
 @pytest.mark.parametrize("path", ["metadata.programs.Abcdef12345", "x.y.ZYXWVUT9876"])
 def test_extract_resource_uid_from_event_path(path):
     assert len(extract_resource_uid_from_event_path(path)) == 11
