@@ -32,7 +32,7 @@ def send_notification_email(config: NotificationConfig, context: Dict[str, Any])
 
     try:
         with smtplib.SMTP_SSL(settings.EMAIL_HOST, settings.EMAIL_PORT, timeout=10) as server:
-            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD)
+            server.login(settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD.get_secret_value())
             all_recipients = to_emails + cc_emails + bcc_emails
             server.send_message(msg, to_addrs=all_recipients)
         print("Email enviado com sucesso")

@@ -1,11 +1,7 @@
 from sqlalchemy import Column, String, JSON, DateTime, Enum
-from sqlalchemy.ext.declarative import declarative_base
 from core.common.enums.notification_enums import ActionEnum, SeverityEnum
-from datetime import datetime
-from core.models.models import GenericModel
+from core.db.base import GenericModel
 from core.utils.id_generator import generate_custom_id
-
-Base = declarative_base()
 
 
 class NotificationConfig(GenericModel):

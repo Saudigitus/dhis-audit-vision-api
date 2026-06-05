@@ -1,17 +1,14 @@
-import os
-
-from dotenv import load_dotenv
-
-
-load_dotenv()
+from core.config import settings
 
 
 def get_required_env(name: str) -> str:
-    value = os.getenv(name)
+    value = getattr(settings, name, None)
     if not value:
         raise RuntimeError(f"Required environment variable {name} is not configured")
+    if hasattr(value, "get_secret_value"):
+        return value.get_secret_value()
     return value
 
 
 def get_dhis2_tls_verify() -> bool | str:
-    return os.getenv("DHIS2_CA_BUNDLE") or True
+    return settings.DHIS2_CA_BUNDLE or True

@@ -22,11 +22,9 @@ services:
   db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: "${DB_NAME:-dhis2_audit_vision}"
-      POSTGRES_USER: "${DB_USER:-postgres}"
-      POSTGRES_PASSWORD: "${DB_PASSWORD:-postgres}"
-    ports:
-      - "${DB_EXPOSED_PORT:-5433}:5432"
+      POSTGRES_DB: "${DB_NAME:?DB_NAME is required}"
+      POSTGRES_USER: "${DB_USER:?DB_USER is required}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

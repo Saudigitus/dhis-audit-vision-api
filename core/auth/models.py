@@ -1,12 +1,5 @@
-from sqlalchemy import Column, String, Boolean, DateTime, func
-from core.db.base import Base
-
-
-class GenericModel(Base):
-    __abstract__ = True
-
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+from sqlalchemy import Column, String, Boolean
+from core.db.base import GenericModel
 
 
 class User(GenericModel):

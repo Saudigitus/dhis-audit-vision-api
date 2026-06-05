@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from collections import defaultdict, deque
+from time import monotonic
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from core.db.dependencies import get_db
@@ -10,13 +13,57 @@ import core.auth.crud as user_crud
 
 router = APIRouter()
 
+LOGIN_RATE_LIMIT = 5
+LOGIN_RATE_WINDOW_SECONDS = 60
+_login_attempts: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def enforce_login_rate_limit(request: Request) -> None:
+    client_ip = _client_ip(request)
+    now = monotonic()
+    attempts = _login_attempts[client_ip]
+    while attempts and now - attempts[0] >= LOGIN_RATE_WINDOW_SECONDS:
+        attempts.popleft()
+    if len(attempts) >= LOGIN_RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many login attempts")
+    attempts.append(now)
+
+
+def _invalid_credentials() -> HTTPException:
+    return HTTPException(
+        status_code=401,
+        detail="Invalid credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _map_user_crud_error(exc: ValueError) -> HTTPException:
+    if isinstance(exc, user_crud.UserAlreadyExistsError):
+        return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, user_crud.UserNotFoundError):
+        return HTTPException(status_code=404, detail=str(exc))
+    return HTTPException(status_code=400, detail=str(exc))
+
+
 # --- Login ---
 
 @router.post("/login", response_model=TokenResponse)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    enforce_login_rate_limit(request)
     user = user_crud.get_by_username(db, form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise _invalid_credentials()
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Inactive user")
 
@@ -39,7 +86,10 @@ def create_user(
     db: Session = Depends(get_db),
     _: User = Depends(require_superuser),
 ):
-    return user_crud.create(db, payload)
+    try:
+        return user_crud.create(db, payload)
+    except ValueError as exc:
+        raise _map_user_crud_error(exc) from exc
 
 
 @router.get("/users", response_model=list[UserRead])
@@ -58,7 +108,10 @@ def get_user(
     db: Session = Depends(get_db),
     _: User = Depends(require_superuser),
 ):
-    return user_crud.get_by_id(db, user_id)
+    user = user_crud.get_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 @router.patch("/users/{user_id}", response_model=UserRead)
@@ -68,7 +121,10 @@ def update_user(
     db: Session = Depends(get_db),
     _: User = Depends(require_superuser),
 ):
-    return user_crud.update(db, user_id, payload)
+    try:
+        return user_crud.update(db, user_id, payload)
+    except ValueError as exc:
+        raise _map_user_crud_error(exc) from exc
 
 
 @router.delete("/users/{user_id}")
@@ -77,5 +133,8 @@ def delete_user(
     db: Session = Depends(get_db),
     _: User = Depends(require_superuser),
 ):
-    user_crud.delete(db, user_id)
+    try:
+        user_crud.delete(db, user_id)
+    except ValueError as exc:
+        raise _map_user_crud_error(exc) from exc
     return {"message": "User deleted"}

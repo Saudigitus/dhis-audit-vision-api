@@ -1,18 +1,16 @@
 import json
 from datetime import datetime
-import os
-import dotenv
+from pathlib import Path
+from core.config import settings
 
-dotenv.load_dotenv()
-
-CONTROL_FILE = os.getenv("CONTROL_FILE_PATH")
-DATA_BASE_DIR = os.getenv("DATA_BASE_DIR")
+CONTROL_FILE = Path(settings.CONTROL_FILE_PATH)
+DATA_BASE_DIR = Path(settings.DATA_BASE_DIR)
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 
 def get_since() -> str:
     try:
-        with open(CONTROL_FILE) as f:
+        with CONTROL_FILE.open() as f:
             data = json.load(f)
             return data.get("since") or datetime.now().strftime(DATE_FORMAT)[:-3]
     except (FileNotFoundError, json.JSONDecodeError):
@@ -20,7 +18,8 @@ def get_since() -> str:
 
 
 def save_since() -> None:
-    with open(CONTROL_FILE, "w") as f:
+    CONTROL_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with CONTROL_FILE.open("w") as f:
         json.dump({"since": datetime.now().strftime(DATE_FORMAT)[:-3]}, f)
 
 
