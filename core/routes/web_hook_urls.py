@@ -1,6 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from core.auth.dependencies import get_current_user
-from core.auth.models import User
+from core.auth.dependencies import get_webhook_auth
 from pydantic import BaseModel, Field
 from datetime import datetime
 from core.audit.service import extract_resource_uid_from_event_path, process_dhis2_event_safe
@@ -17,7 +16,7 @@ class Dhis2EventWebhook(BaseModel):
 async def receive_dhis2_event_webhook(
     payload: Dhis2EventWebhook,
     background_tasks: BackgroundTasks,
-    _: User = Depends(get_current_user),
+    _: object = Depends(get_webhook_auth),
 ):
     """
     Webhook endpoint to receive events from DHIS2.

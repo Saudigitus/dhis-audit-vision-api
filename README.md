@@ -25,9 +25,14 @@ local audit object snapshots. Set `DHIS2_PROGRAM_DEPENDENCY_FIELDS` and
 `DHIS2_DATASET_DEPENDENCY_FIELDS` to the fields used when resolving related
 metadata IDs.
 
-The DHIS2 webhook must send valid API Basic Auth or Bearer credentials. Deploy
-the updated `dhis_query_view.sql` definition in DHIS2 as well; it now receives
-the validated integer variable `since_epoch`.
+The DHIS2 webhook must send valid API credentials using one of these modes:
+`http-basic`, `api-token`, or an explicit `Authorization: Bearer <token>`
+header. For DHIS2 `api-token`, set `WEBHOOK_API_TOKEN` to a high-entropy value
+with at least 32 bytes and configure the same value in the DHIS2 event hook.
+This authenticates only the webhook endpoint. A DHIS2 personal access token
+will not authenticate against this service unless it is also configured as
+`WEBHOOK_API_TOKEN`. Deploy the updated `dhis_query_view.sql` definition in
+DHIS2 as well; it now receives the validated integer variable `since_epoch`.
 
 ### 2. Build and start the services
 

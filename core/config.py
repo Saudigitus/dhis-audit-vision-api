@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     DATA_BASE_DIR: str
     SECRET_KEY: str = Field(min_length=32)
     TOKEN_EXPIRE_MINUTES: int = 60
+    WEBHOOK_API_TOKEN: SecretStr | None = None
     ADMIN_USERNAME: str
     ADMIN_EMAIL: str
     ADMIN_PASSWORD: SecretStr
@@ -61,6 +62,15 @@ class Settings(BaseSettings):
         }
         if value in weak_values:
             raise ValueError("SECRET_KEY must not use a documented placeholder")
+        return value
+
+    @field_validator("WEBHOOK_API_TOKEN")
+    @classmethod
+    def validate_webhook_api_token(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None:
+            return value
+        if len(value.get_secret_value().encode("utf-8")) < 32:
+            raise ValueError("WEBHOOK_API_TOKEN must be at least 32 bytes")
         return value
 
     model_config = SettingsConfigDict(

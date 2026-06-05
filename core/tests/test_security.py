@@ -21,7 +21,7 @@ def test_audit_trigger_requires_superuser():
 
 
 def test_webhook_requires_authentication():
-    assert "get_current_user" in _dependency_names("/api/webhooks/dhis2/event", "POST")
+    assert "get_webhook_auth" in _dependency_names("/api/webhooks/dhis2/event", "POST")
 
 
 @pytest.mark.parametrize(
