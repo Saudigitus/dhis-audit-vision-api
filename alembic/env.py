@@ -1,5 +1,4 @@
 from logging.config import fileConfig
-from dotenv import load_dotenv
 
 from sqlalchemy import engine_from_config, pool
 from alembic import context
@@ -10,16 +9,9 @@ from core.auth import models  # ensure models are imported
 from core.models import models  # ensure models are imported
 from core.notification import models  # ensure models are imported
 
-# 🔥 ensure .env is loaded
-load_dotenv()
-
 config = context.config
 
-# 🔥 override DB URL
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
-
-# Debug (remove later)
-print("Using DB:", settings.DATABASE_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -53,12 +45,7 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 
-# ✅ This is what actually triggers the migration
 if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-
-print("Tables in metadata:", Base.metadata.tables.keys())
-
-print("Starting Alembic migration...")

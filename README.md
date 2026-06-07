@@ -12,9 +12,18 @@ Create the `.env` file and replace the required example values:
 cp .env.example .env
 ```
 
+Set `SECRET_KEY` to a random value with at least 32 bytes. The API refuses to
+start with an empty, weak, or documented placeholder key.
+
 Set `CORS_ALLOW_ORIGINS` to the comma-separated browser origins that may call
-the API. Wildcard origins are rejected. If the DHIS2 server uses a private CA,
-set `DHIS2_CA_BUNDLE` to its certificate bundle path.
+the API. Wildcard origins are rejected. Set `MAX_REQUEST_BODY_BYTES` to the
+largest request body the API should accept. If the DHIS2 server uses a private
+CA, set `DHIS2_CA_BUNDLE` to its certificate bundle path.
+
+Set `DHIS2_OBJECT_FIELDS` to the minimal DHIS2 fields that should be stored in
+local audit object snapshots. Set `DHIS2_PROGRAM_DEPENDENCY_FIELDS` and
+`DHIS2_DATASET_DEPENDENCY_FIELDS` to the fields used when resolving related
+metadata IDs.
 
 The DHIS2 webhook must send valid API Basic Auth or Bearer credentials. Deploy
 the updated `dhis_query_view.sql` definition in DHIS2 as well; it now receives
@@ -47,8 +56,9 @@ docker compose exec api alembic revision --autogenerate -m "Migration descriptio
 docker compose exec api python commands.py seed-superuser
 ```
 
-This command creates the configured admin user if it does not exist and prints
-a new access token every time it runs.
+This command creates the configured admin user if it does not exist. It does
+not print tokens by default; use `/api/auth/login` to obtain a token. If a
+one-time bootstrap token is required, run it with `--print-token`.
 
 ### 5. View logs and stop the services
 
@@ -79,6 +89,12 @@ On Windows:
 pip install -r requirements.txt
 ```
 
+For local test/development tooling:
+
+```sh
+pip install -r requirements-dev.txt
+```
+
 ### 4. Configure the environment variables
 
 Create the `.env` file in the project root from `.env.example`.
@@ -100,8 +116,9 @@ alembic upgrade head
 python commands.py seed-superuser
 ```
 
-This command creates the configured admin user if it does not exist and prints
-a new access token every time it runs.
+This command creates the configured admin user if it does not exist. It does
+not print tokens by default; use `/api/auth/login` to obtain a token. If a
+one-time bootstrap token is required, run it with `--print-token`.
 
 ### 6. Start the server
 ```sh

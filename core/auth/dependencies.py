@@ -1,18 +1,27 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, HTTPBasic, HTTPBasicCredentials
+from jwt import ExpiredSignatureError, InvalidTokenError
 from sqlalchemy.orm import Session
 from core.db.dependencies import get_db
 from core.auth.security import verify_password, decode_token
 from core.auth.models import User
 import core.auth.crud as user_crud
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 basic_scheme = HTTPBasic(auto_error=False)
+
+
+def _unauthorized(detail: str = "Invalid credentials") -> HTTPException:
+    return HTTPException(
+        status_code=401,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def _require_active(user: User | None) -> User:
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise _unauthorized()
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Inactive user")
     return user
@@ -27,10 +36,16 @@ def get_current_user_token(token: str = Depends(oauth2_scheme), db: Session = De
     try:
         payload = decode_token(token)
         username = payload.get("sub")
+        if not username:
+            raise _unauthorized()
         user = user_crud.get_by_username(db, username)
+        if not user:
+            raise _unauthorized()
         return user
-    except Exception:
-        return None
+    except ExpiredSignatureError as exc:
+        raise _unauthorized("Token expired") from exc
+    except InvalidTokenError as exc:
+        raise _unauthorized("Invalid token") from exc
 
 
 # --- Basic Auth ---

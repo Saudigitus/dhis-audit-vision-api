@@ -1,23 +1,17 @@
 import os
-import json
-from dotenv import load_dotenv
 from core.dhis2.dhis2_helpers import get_audit_sql_view_data, retrieve_audit_sql_view_data
 from core.utils.utils import get_since, save_since, format_timestamp
 from core.common.constants import constants
 from core.audit.audit_helpers import save_audit_json
 from core.db.session import SessionLocal
-from core.common.config import get_required_env
+from core.config import settings
 
 
-db = SessionLocal()
-load_dotenv()
-
-
-SERVER_DHIS2_URL = get_required_env("SERVER_DHIS2_URL")
-SERVER_DHIS2_AUTH = get_required_env("SERVER_DHIS2_AUTH")
-SQL_VIEW_ID = get_required_env("SQL_VIEW_ID")
-DATA_BASE_DIR = os.getenv("DATA_BASE_DIR", "/data")
-OFFSET_HOURS = int(os.getenv("OFFSET_HOURS", "2"))
+SERVER_DHIS2_URL = settings.SERVER_DHIS2_URL
+SERVER_DHIS2_AUTH = settings.SERVER_DHIS2_AUTH
+SQL_VIEW_ID = settings.SQL_VIEW_ID
+DATA_BASE_DIR = settings.DATA_BASE_DIR
+OFFSET_HOURS = settings.OFFSET_HOURS
 
 
 class AuditProcess:
@@ -38,7 +32,8 @@ class AuditProcess:
             }
             audit_data = get_audit_sql_view_data(server, SQL_VIEW_ID, current_since, OFFSET_HOURS)
 
-            save_audit_json(db=db, payload=audit_data)
+            with SessionLocal() as db:
+                save_audit_json(db=db, payload=audit_data)
             save_since()
             print("Audit process completed successfully.")
         except Exception as e:
@@ -62,7 +57,8 @@ class AuditProcess:
             }
             audit_data = retrieve_audit_sql_view_data(server, sql_view_id, resource_uid, current_created_at, offset_hours)
 
-            save_audit_json(db=db, payload=audit_data)
+            with SessionLocal() as db:
+                save_audit_json(db=db, payload=audit_data)
             save_since()
             print("Automatic audit process completed successfully.")
         except Exception as e:

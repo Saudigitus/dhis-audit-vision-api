@@ -1,23 +1,24 @@
 import json
-import os
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from core.common.utils import make_request, generate_headers
-from core.common.constants import request_methods
-from dotenv import load_dotenv
 from core.common.constants import constants, request_methods
 import requests
 import re
 from datetime import datetime, timezone
 from core.common.config import get_dhis2_tls_verify
+from core.config import settings
 
 
-load_dotenv()
+Path("logs").mkdir(exist_ok=True)
+logger = logging.getLogger(__name__)
 
-os.makedirs("logs", exist_ok=True)
 
-
-DATA_BASE_DIR = os.getenv("DATA_BASE_DIR", "./data")
+DATA_BASE_DIR = settings.DATA_BASE_DIR
+DHIS2_OBJECT_FIELDS = settings.DHIS2_OBJECT_FIELDS
+DHIS2_PROGRAM_DEPENDENCY_FIELDS = settings.DHIS2_PROGRAM_DEPENDENCY_FIELDS
+DHIS2_DATASET_DEPENDENCY_FIELDS = settings.DHIS2_DATASET_DEPENDENCY_FIELDS
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RESOURCE_MAPPING_FILENAMES = (
     "klass_resource_mapping.json",
@@ -97,17 +98,29 @@ def _resource_mapping_paths() -> list[Path]:
     return [data_dir / filename for filename in RESOURCE_MAPPING_FILENAMES]
 
 
-def save_erro_log(exception: Exception, index: int, chunk: dict) -> None:
-    logging.basicConfig(filename='logs/load_event_errors.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
+def _rotating_logger(name: str, filename: str) -> logging.Logger:
+    target_logger = logging.getLogger(name)
+    if not target_logger.handlers:
+        handler = RotatingFileHandler(
+            filename,
+            maxBytes=settings.LOG_ROTATION_MAX_BYTES,
+            backupCount=settings.LOG_ROTATION_BACKUP_COUNT,
+        )
+        handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        target_logger.addHandler(handler)
+        target_logger.setLevel(logging.INFO)
+        target_logger.propagate = False
+    return target_logger
 
-    logger.error("Chunk %s failed with %s", index, type(exception).__name__)
+
+def save_erro_log(exception: Exception, index: int, chunk: dict) -> None:
+    error_logger = _rotating_logger("audit_load_errors", "logs/load_event_errors.log")
+    error_logger.error("Chunk %s failed with %s", index, type(exception).__name__)
 
 
 def save_succes_log(index: int, response: dict) -> None:
-    logging.basicConfig(filename='logs/load_event_success.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
-    logger.info("Chunk %s loaded successfully", index)
+    success_logger = _rotating_logger("audit_load_success", "logs/load_event_success.log")
+    success_logger.info("Chunk %s loaded successfully", index)
 
 
 def get_audit_sql_view_data(server: dict, view_id: str, since: str, offset_hours: int) -> dict:
@@ -150,20 +163,61 @@ def get_audit_sql_view_data(server: dict, view_id: str, since: str, offset_hours
     return result
 
 
-def get_resouce_object_data(server: dict, resource: str, resource_id: str) -> dict:
+def get_resource_object_data(server: dict, resource: str, resource_id: str, fields: str = DHIS2_OBJECT_FIELDS) -> dict:
     try:
-        url = f"{server.get('url')}/api/{resource}/{resource_id}.json?fields=*"
-        print(f"Fetching data from URL: {url}")
+        url = f"{server.get('url')}/api/{resource}/{resource_id}.json"
         headers = generate_headers(server=server)
-        response = requests.get(url, headers=headers, verify=get_dhis2_tls_verify())
+        response = requests.get(
+            url,
+            headers=headers,
+            params={"fields": fields},
+            verify=get_dhis2_tls_verify(),
+        )
         if response.status_code == 404:
-            print(f"Resource not found at URL: {url}")
+            logger.info("DHIS2 resource not found: %s/%s", resource, resource_id)
             return {}
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching resource data: {e}")
+        logger.exception("Error fetching DHIS2 resource %s/%s", resource, resource_id)
         raise e
+
+
+def get_resource_objects_data(
+    server: dict,
+    resource: str,
+    resource_ids: list[str],
+    fields: str = DHIS2_OBJECT_FIELDS,
+) -> dict[str, dict]:
+    unique_ids = sorted({_validate_resource_uid(resource_id) for resource_id in resource_ids if resource_id})
+    if not unique_ids:
+        return {}
+
+    headers = generate_headers(server=server)
+    url = f"{server.get('url')}/api/{resource}.json"
+    try:
+        response = requests.get(
+            url,
+            headers=headers,
+            params={
+                "filter": f"id:in:[{','.join(unique_ids)}]",
+                "fields": fields,
+                "paging": "false",
+            },
+            verify=get_dhis2_tls_verify(),
+        )
+        response.raise_for_status()
+        payload = response.json()
+        items = payload.get(resource)
+        if not isinstance(items, list):
+            items = next((value for value in payload.values() if isinstance(value, list)), [])
+        return {item["id"]: item for item in items if isinstance(item, dict) and item.get("id")}
+    except requests.exceptions.RequestException:
+        logger.exception("Error fetching DHIS2 resource batch %s", resource)
+        return {
+            resource_id: get_resource_object_data(server, resource, resource_id, fields)
+            for resource_id in unique_ids
+        }
 
 
 def get_resources_mapping() -> dict:
@@ -218,14 +272,24 @@ def extract_all_ids(data: dict | list, seen: set = None) -> list[str]:
 
 def get_dhis2_program(server: dict, program_id: str) -> dict:
     headers = generate_headers(server=server)
-    url = f"{server.get('url')}/api/programs/{program_id}.json?fields=*"
-    return make_request(url=url, method=request_methods.GET, headers=headers)
+    url = f"{server.get('url')}/api/programs/{program_id}.json"
+    return make_request(
+        url=url,
+        method=request_methods.GET,
+        headers=headers,
+        params={"fields": DHIS2_PROGRAM_DEPENDENCY_FIELDS},
+    )
 
 
 def get_dhis2_dataset(server: dict, dataset_id: str) -> dict:
     headers = generate_headers(server=server)
-    url = f"{server.get('url')}/api/dataSets/{dataset_id}.json?fields=*"
-    return make_request(url=url, method=request_methods.GET, headers=headers)
+    url = f"{server.get('url')}/api/dataSets/{dataset_id}.json"
+    return make_request(
+        url=url,
+        method=request_methods.GET,
+        headers=headers,
+        params={"fields": DHIS2_DATASET_DEPENDENCY_FIELDS},
+    )
 
 
 def get_program_dependants(server: dict, program_id: str) -> dict:

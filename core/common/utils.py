@@ -2,11 +2,7 @@ from core.common.constants import constants, request_methods
 import json
 import requests
 import isodate
-from sqlalchemy.orm import Session
-from core.db.session import SessionLocal
 from core.common.config import get_dhis2_tls_verify
-
-db = SessionLocal()
 
 
 def make_hash(list: list, key: str) -> dict:
@@ -146,4 +142,3 @@ def get_value(data: dict, path: str, mapping: dict):
 
     value = get_value_from_path(data=data, path=path)
     return get_value_from_mapping(value=value, mapping=mapping)
-
