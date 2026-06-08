@@ -1,0 +1,58 @@
+version: '3.8'
+services:
+  api:
+    build:
+      context: ../..
+    env_file:
+      - ../../.env
+    environment:
+      DB_HOST: audit-db
+      DB_PORT: 5432
+      DATA_BASE_DIR: /app/data
+      CONTROL_FILE_PATH: /app/data/control_file.json
+      SERVER_DHIS2_URL: "https://your-dhis2-instance-url"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - audit_data:/app/data
+      - audit_logs:/app/logs
+    depends_on:
+      audit-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - audit-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  audit-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: "${DB_NAME:-dhis2_audit_vision}"
+      POSTGRES_USER: "${DB_USER:-postgres}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-postgres}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-dhis2_audit_vision}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - audit-network
+
+networks:
+  audit-network:
+    driver: bridge
+
+volumes:
+  audit_data:
+  audit_logs:
+  postgres_data:

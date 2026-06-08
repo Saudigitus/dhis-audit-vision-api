@@ -1,9 +1,10 @@
+version: '3.8'
 services:
   api:
     build:
-      context: .
+      context: ../..
     env_file:
-      - .env
+      - ../../.env
     environment:
       DB_HOST: audit-db
       DB_PORT: 5432
@@ -11,7 +12,7 @@ services:
       CONTROL_FILE_PATH: /app/data/control_file.json
       SERVER_DHIS2_URL: "http://dhis2-web:8080"
     ports:
-      - "${PORT:-8000}:8000"
+      - "8000:8000"
     volumes:
       - audit_data:/app/data
       - audit_logs:/app/logs
@@ -48,7 +49,12 @@ services:
       - dhis2-network
 
   dhis2-web:
-    image: "${DHIS2_IMAGE:-dhis2/core:2.40.0.1}"
+    image: "${DHIS2_IMAGE:-dhis2/core:2.42.5}"
+    user: root
+    entrypoint: >
+      sh -c "mkdir -p /opt/dhis2/logs &&
+             chmod 777 /opt/dhis2/logs &&
+             exec catalina.sh run"
     environment:
       DB_HOSTNAME: dhis2-db
       DB_NAME: "${DHIS2_DB_NAME:-dhis}"
@@ -57,7 +63,8 @@ services:
     ports:
       - "${DHIS2_PORT:-8080}:8080"
     volumes:
-      - ./dhis.conf:/opt/dhis2/dhis.conf:ro
+      - ../../dhis.conf:/opt/dhis2/dhis.conf:ro
+      - dhis2_logs:/opt/dhis2/logs
     depends_on:
       dhis2-db:
         condition: service_healthy
@@ -99,9 +106,9 @@ services:
 
   dhis2-db-dump:
     image: busybox
-    command: sh -c '[ -f dump.sql.gz ] && echo "dump.sql.gz exists" || wget --output-document dump.sql.gz ${DHIS2_DB_DUMP_URL:-https://databases.dhis2.org/sierra-leone/2.40/dhis2-db-sierra-leone.sql.gz}'
+    command: sh -c '[ -f dump.sql.gz ] && echo "dump.sql.gz exists" || wget --output-document dump.sql.gz ${DHIS2_DB_DUMP_URL:-https://databases.dhis2.org/sierra-leone/2.42/dhis2-db-sierra-leone.sql.gz}'
     environment:
-      DHIS2_DB_DUMP_URL: "${DHIS2_DB_DUMP_URL:-https://databases.dhis2.org/sierra-leone/2.40/dhis2-db-sierra-leone.sql.gz}"
+      DHIS2_DB_DUMP_URL: "${DHIS2_DB_DUMP_URL:-https://databases.dhis2.org/sierra-leone/2.42/dhis2-db-sierra-leone.sql.gz}"
     working_dir: /opt/dump
     volumes:
       - dhis2_db_dump:/opt/dump
@@ -116,3 +123,4 @@ volumes:
   postgres_data:
   dhis2_db_data:
   dhis2_db_dump:
+  dhis2_logs:

@@ -4,9 +4,7 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, HTTPBasic, HTTPBasicCredentials
 from fastapi.security.utils import get_authorization_scheme_param
 from jwt import ExpiredSignatureError, InvalidTokenError
-import requests
 from sqlalchemy.orm import Session
-from core.common.config import get_dhis2_tls_verify
 from core.config import settings
 from core.db.dependencies import get_db
 from core.auth.security import verify_password, decode_token
@@ -42,15 +40,11 @@ def _get_user_from_token(token: str | None, db: Session) -> User | None:
         payload = decode_token(token)
         username = payload.get("sub")
         if not username:
-            raise _unauthorized()
+            return None
         user = user_crud.get_by_username(db, username)
-        if not user:
-            raise _unauthorized()
         return user
-    except ExpiredSignatureError as exc:
-        raise _unauthorized("Token expired") from exc
-    except InvalidTokenError as exc:
-        raise _unauthorized("Invalid token") from exc
+    except (ExpiredSignatureError, InvalidTokenError):
+        return None
 
 
 def get_current_user_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User | None:
@@ -106,22 +100,6 @@ def _matches_webhook_api_token(token: str | None) -> bool:
     return compare_digest(token, configured.get_secret_value())
 
 
-def _dhis2_accepts_api_token(token: str | None) -> bool:
-    if not token:
-        return False
-    url = f"{settings.SERVER_DHIS2_URL.rstrip('/')}/api/me"
-    try:
-        response = requests.get(
-            url,
-            headers={"Authorization": f"ApiToken {token}", "Accept": "application/json"},
-            timeout=10,
-            verify=get_dhis2_tls_verify(),
-        )
-    except requests.RequestException:
-        return False
-    return response.status_code == 200
-
-
 def get_webhook_auth(
     request: Request,
     db: Session = Depends(get_db),
@@ -135,10 +113,12 @@ def get_webhook_auth(
     api_token = _api_token_from_request(request)
     if _matches_webhook_api_token(api_token):
         return None
-    if _dhis2_accepts_api_token(api_token):
-        return None
 
-    return _require_active(_get_user_from_token(api_token, db))
+    jwt_user = _get_user_from_token(api_token, db)
+    if jwt_user:
+        return _require_active(jwt_user)
+
+    raise _unauthorized()
 
 
 # --- Superuser guard ---

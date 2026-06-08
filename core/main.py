@@ -4,7 +4,6 @@ from core.routes.audit_object_urls import router as audit_object_router
 from core.routes.audit_urls import router as audit_router
 from core.routes.web_hook_urls import router as webhook_router
 from core.auth.router import router as auth_router
-import os
 import json
 import re
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,20 +54,6 @@ async def reject_large_request_bodies(request: Request, call_next):
             {"detail": "Request body too large"},
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
         )
-
-    body = b""
-    async for chunk in request.stream():
-        body += chunk
-        if len(body) > settings.MAX_REQUEST_BODY_BYTES:
-            return JSONResponse(
-                {"detail": "Request body too large"},
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            )
-
-    async def receive():
-        return {"type": "http.request", "body": body, "more_body": False}
-
-    request._receive = receive
     return await call_next(request)
 
 
@@ -106,7 +91,6 @@ def list_logs(_: User = Depends(require_superuser)):
         for entry in LOG_DIR.iterdir()
         if entry.is_file() and entry.suffix in {".txt", ".log"}
     ]
-
     return {'logs': logs}
 
 
