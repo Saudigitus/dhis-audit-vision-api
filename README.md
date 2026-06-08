@@ -25,18 +25,39 @@ local audit object snapshots. Set `DHIS2_PROGRAM_DEPENDENCY_FIELDS` and
 `DHIS2_DATASET_DEPENDENCY_FIELDS` to the fields used when resolving related
 metadata IDs.
 
-The DHIS2 webhook must send valid API Basic Auth or Bearer credentials. Deploy
-the updated `dhis_query_view.sql` definition in DHIS2 as well; it now receives
-the validated integer variable `since_epoch`.
+The DHIS2 webhook must send valid API credentials using one of these modes:
+`http-basic`, `api-token`, or an explicit `Authorization: Bearer <token>`
+header. For DHIS2 `api-token`, either configure a DHIS2 personal access token
+for the event hook, which this API validates against `SERVER_DHIS2_URL/api/me`,
+or set `WEBHOOK_API_TOKEN` to a high-entropy value with at least 32 bytes and
+configure the same value in the DHIS2 event hook. `WEBHOOK_API_TOKEN`
+authenticates only the webhook endpoint. Deploy the updated
+`dhis_query_view.sql` definition in DHIS2 as well; it now receives the
+validated integer variable `since_epoch`.
 
-### 2. Build and start the services
+### 2. Build and start the services (with DHIS2)
 
 ```sh
 docker compose up --build -d
 ```
 
-The API will be available at `http://localhost:8000` and the interactive
-documentation at `http://localhost:8000/docs`.
+This will start:
+- **Audit Vision API** at `http://localhost:8000` (docs at `http://localhost:8000/docs`)
+- **Audit DB** (PostgreSQL)
+- **DHIS2** at `http://localhost:8080` (default credentials: admin/district)
+- **DHIS2 DB** (PostgreSQL with PostGIS)
+
+Note: The first startup may take a few minutes as DHIS2 downloads and initializes the demo database.
+
+### 2.1 Configure DHIS2 (dhis.conf)
+
+O arquivo `dhis.conf` já está configurado com o sistema de auditoria ativado:
+- `audit = METADATA, TRACKER, CREATE, UPDATE, DELETE`
+
+Se precisar adicionar URLs permitidas para webhooks, edite o arquivo `dhis.conf` e adicione:
+```
+route.remote_servers_allowed = https://your-audit-api-url/
+```
 
 ### 3. Run the migrations
 
@@ -63,7 +84,11 @@ one-time bootstrap token is required, run it with `--print-token`.
 ### 5. View logs and stop the services
 
 ```sh
+# View logs for specific services
 docker compose logs -f api
+docker compose logs -f dhis2-web
+
+# Stop all services
 docker compose down
 ```
 

@@ -1,0 +1,123 @@
+services:
+  api:
+    build:
+      context: ../..
+    env_file:
+      - ../../.env
+    environment:
+      DB_HOST: audit-db
+      DB_PORT: 5432
+      DATA_BASE_DIR: /app/data
+      CONTROL_FILE_PATH: /app/data/control_file.json
+      SERVER_DHIS2_URL: "http://dhis2-web:8080"
+    volumes:
+      - audit_data:/app/data
+      - audit_logs:/app/logs
+    depends_on:
+      audit-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dhis2-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  audit-db:
+    image: postgres:17-alpine
+    env_file:
+      - ../../.env
+    environment:
+      POSTGRES_DB: "${DB_NAME}"
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - dhis2-network
+
+  dhis2-web:
+    image: "${DHIS2_IMAGE}"
+    user: root
+    entrypoint: >
+      sh -c "mkdir -p /opt/dhis2/logs &&
+             chmod 777 /opt/dhis2/logs &&
+             exec catalina.sh run"
+    environment:
+      DB_HOSTNAME: dhis2-db
+      DB_NAME: "${DHIS2_DB_NAME}"
+      DB_USERNAME: "${DHIS2_DB_USER}"
+      DB_PASSWORD: "${DHIS2_DB_PASSWORD}"
+    ports:
+      - "${DHIS2_PORT}:8080"
+    volumes:
+      - ../../dhis.conf:/opt/dhis2/dhis.conf:ro
+      - dhis2_logs:/opt/dhis2/logs
+    depends_on:
+      dhis2-db:
+        condition: service_healthy
+      dhis2-db-dump:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - dhis2-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  dhis2-db:
+    image: ghcr.io/baosystems/postgis:12-3.3
+    environment:
+      POSTGRES_USER: "${DHIS2_DB_USER}"
+      POSTGRES_DB: "${DHIS2_DB_NAME}"
+      POSTGRES_PASSWORD: "${DHIS2_DB_PASSWORD}"
+      PGPASSWORD: "${DHIS2_DB_PASSWORD}"
+    volumes:
+      - dhis2_db_data:/var/lib/postgresql/data
+      - dhis2_db_dump:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD-SHELL", "psql --no-password --quiet --username ${DHIS2_DB_USER} postgres://127.0.0.1/${DHIS2_DB_NAME} -p 5432 --command \"SELECT 'ok'\" > /dev/null"]
+      start_period: 120s
+      interval: 1s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - dhis2-network
+
+  dhis2-db-dump:
+    image: busybox
+    command: sh -c '[ -f dump.sql.gz ] && echo "dump.sql.gz exists" || wget --output-document dump.sql.gz ${DHIS2_DB_DUMP_URL}'
+    environment:
+      DHIS2_DB_DUMP_URL: "${DHIS2_DB_DUMP_URL}"
+    working_dir: /opt/dump
+    volumes:
+      - dhis2_db_dump:/opt/dump
+
+networks:
+  dhis2-network:
+    driver: bridge
+
+volumes:
+  audit_data:
+  audit_logs:
+  postgres_data:
+  dhis2_db_data:
+  dhis2_db_dump:
+  dhis2_logs:

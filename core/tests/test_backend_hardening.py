@@ -3,13 +3,17 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import HTTPException
 from jwt import encode
+from pydantic import SecretStr
+from starlette.requests import Request
 
 from core.audit import audit_helpers
 from core.audit.service import extract_resource_uid_from_event_path
+from core.auth import crud as user_crud
 from core.auth import router as auth_router
-from core.auth.dependencies import get_current_user_token
+from core.auth.dependencies import get_current_user_api_token, get_current_user_token, get_webhook_auth
 from core.auth.security import ALGORITHM, SECRET_KEY, create_access_token, decode_token
 from core.common.enums.audit_enums import AuditScope, AuditType
+from core.config import settings
 from core.models.models import Audit
 from core.routes import audit_object_urls, audit_urls
 
@@ -51,6 +55,61 @@ def test_access_token_round_trip():
     token = create_access_token({"sub": "admin"})
 
     assert decode_token(token)["sub"] == "admin"
+
+
+def test_dhis2_api_token_scheme_accepts_api_jwt(monkeypatch):
+    token = create_access_token({"sub": "admin"})
+    request = Request(
+        {
+            "type": "http",
+            "headers": [(b"authorization", f"ApiToken {token}".encode("ascii"))],
+        }
+    )
+
+    class FakeUser:
+        username = "admin"
+        is_active = True
+
+    monkeypatch.setattr(user_crud, "get_by_username", lambda db, username: FakeUser())
+
+    assert get_current_user_api_token(request=request, db=FakeDB()).username == "admin"
+
+
+def test_webhook_accepts_configured_static_api_token(monkeypatch):
+    token = "abcdefghijklmnopqrstuvwxyz1234567890"
+    monkeypatch.setattr(settings, "WEBHOOK_API_TOKEN", SecretStr(token))
+    request = Request(
+        {
+            "type": "http",
+            "headers": [(b"authorization", f"ApiToken {token}".encode("ascii"))],
+        }
+    )
+
+    assert get_webhook_auth(request=request, db=FakeDB(), token_user=None, basic_user=None) is None
+
+
+def test_webhook_accepts_dhis2_pat_when_dhis2_validates_it(monkeypatch):
+    token = "d2pat_abcdefghijklmnopqrstuvwxyz1234567890"
+    monkeypatch.setattr(settings, "WEBHOOK_API_TOKEN", None)
+    request = Request(
+        {
+            "type": "http",
+            "headers": [(b"authorization", f"ApiToken {token}".encode("ascii"))],
+        }
+    )
+
+    class FakeResponse:
+        status_code = 200
+
+    def fake_get(url, headers, timeout, verify):
+        assert url.endswith("/api/me")
+        assert headers["Authorization"] == f"ApiToken {token}"
+        assert timeout == 10
+        return FakeResponse()
+
+    monkeypatch.setattr("core.auth.dependencies.requests.get", fake_get)
+
+    assert get_webhook_auth(request=request, db=FakeDB(), token_user=None, basic_user=None) is None
 
 
 @pytest.mark.parametrize("path", ["metadata.programs.Abcdef12345", "x.y.ZYXWVUT9876"])
