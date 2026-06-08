@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   api:
     build:
@@ -11,8 +10,6 @@ services:
       DATA_BASE_DIR: /app/data
       CONTROL_FILE_PATH: /app/data/control_file.json
       SERVER_DHIS2_URL: "http://dhis2-web:8080"
-    ports:
-      - "8000:8000"
     volumes:
       - audit_data:/app/data
       - audit_logs:/app/logs
@@ -33,14 +30,16 @@ services:
 
   audit-db:
     image: postgres:17-alpine
+    env_file:
+      - ../../.env
     environment:
-      POSTGRES_DB: "${DB_NAME:-dhis2_audit_vision}"
-      POSTGRES_USER: "${DB_USER:-postgres}"
-      POSTGRES_PASSWORD: "${DB_PASSWORD:-postgres}"
+      POSTGRES_DB: "${DB_NAME}"
+      POSTGRES_USER: "${DB_USER}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-dhis2_audit_vision}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -49,7 +48,7 @@ services:
       - dhis2-network
 
   dhis2-web:
-    image: "${DHIS2_IMAGE:-dhis2/core:2.42.5}"
+    image: "${DHIS2_IMAGE}"
     user: root
     entrypoint: >
       sh -c "mkdir -p /opt/dhis2/logs &&
@@ -57,11 +56,11 @@ services:
              exec catalina.sh run"
     environment:
       DB_HOSTNAME: dhis2-db
-      DB_NAME: "${DHIS2_DB_NAME:-dhis}"
-      DB_USERNAME: "${DHIS2_DB_USER:-dhis}"
-      DB_PASSWORD: "${DHIS2_DB_PASSWORD:-dhis}"
+      DB_NAME: "${DHIS2_DB_NAME}"
+      DB_USERNAME: "${DHIS2_DB_USER}"
+      DB_PASSWORD: "${DHIS2_DB_PASSWORD}"
     ports:
-      - "${DHIS2_PORT:-8080}:8080"
+      - "${DHIS2_PORT}:8080"
     volumes:
       - ../../dhis.conf:/opt/dhis2/dhis.conf:ro
       - dhis2_logs:/opt/dhis2/logs
@@ -85,30 +84,28 @@ services:
   dhis2-db:
     image: ghcr.io/baosystems/postgis:12-3.3
     environment:
-      POSTGRES_USER: "${DHIS2_DB_USER:-dhis}"
-      POSTGRES_DB: "${DHIS2_DB_NAME:-dhis}"
-      POSTGRES_PASSWORD: "${DHIS2_DB_PASSWORD:-dhis}"
-      PGPASSWORD: "${DHIS2_DB_PASSWORD:-dhis}"
+      POSTGRES_USER: "${DHIS2_DB_USER}"
+      POSTGRES_DB: "${DHIS2_DB_NAME}"
+      POSTGRES_PASSWORD: "${DHIS2_DB_PASSWORD}"
+      PGPASSWORD: "${DHIS2_DB_PASSWORD}"
     volumes:
       - dhis2_db_data:/var/lib/postgresql/data
       - dhis2_db_dump:/docker-entrypoint-initdb.d/
     healthcheck:
-      test: ["CMD-SHELL", "psql --no-password --quiet --username ${DHIS2_DB_USER:-dhis} postgres://127.0.0.1/${DHIS2_DB_NAME:-dhis} -p 5432 --command \"SELECT 'ok'\" > /dev/null"]
+      test: ["CMD-SHELL", "psql --no-password --quiet --username ${DHIS2_DB_USER} postgres://127.0.0.1/${DHIS2_DB_NAME} -p 5432 --command \"SELECT 'ok'\" > /dev/null"]
       start_period: 120s
       interval: 1s
       timeout: 3s
       retries: 5
-    ports:
-      - "${DHIS2_DB_EXPOSED_PORT:-5434}:5432"
     restart: unless-stopped
     networks:
       - dhis2-network
 
   dhis2-db-dump:
     image: busybox
-    command: sh -c '[ -f dump.sql.gz ] && echo "dump.sql.gz exists" || wget --output-document dump.sql.gz ${DHIS2_DB_DUMP_URL:-https://databases.dhis2.org/sierra-leone/2.42/dhis2-db-sierra-leone.sql.gz}'
+    command: sh -c '[ -f dump.sql.gz ] && echo "dump.sql.gz exists" || wget --output-document dump.sql.gz ${DHIS2_DB_DUMP_URL}'
     environment:
-      DHIS2_DB_DUMP_URL: "${DHIS2_DB_DUMP_URL:-https://databases.dhis2.org/sierra-leone/2.42/dhis2-db-sierra-leone.sql.gz}"
+      DHIS2_DB_DUMP_URL: "${DHIS2_DB_DUMP_URL}"
     working_dir: /opt/dump
     volumes:
       - dhis2_db_dump:/opt/dump

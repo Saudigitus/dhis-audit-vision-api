@@ -61,10 +61,15 @@ SERVER_DHIS2_URL=http://dhis2-web:8080
 
 1. Choose the scenario that best fits your needs
 2. Navigate to the scenario folder
-3. Configure the `.env` file in the project root
+3. Configure the `.env` file in the project root (the compose files are already set up to use `../../.env`)
 4. Run:
    ```bash
    docker compose up --build -d
+   ```
+   
+   Or explicitly specify the env file:
+   ```bash
+   docker compose --env-file ../../.env up --build -d
    ```
 
 ## Nginx Configs
@@ -80,9 +85,9 @@ For quick testing, use scenario 3:
 
 ```bash
 cd docker/scenario-3-dev-docker-compose
-docker compose up --build -d
-docker compose exec api alembic upgrade head
-docker compose exec api python commands.py seed-superuser
+docker compose --env-file ../../.env up --build -d
+docker compose --env-file ../../.env exec api alembic upgrade head
+docker compose --env-file ../../.env exec api python commands.py seed-superuser
 ```
 
 The API will be available at `http://localhost:8000` and DHIS2 at `http://localhost:8080`.
