@@ -15,17 +15,17 @@ def make_request(url: str, method: str = request_methods.GET, headers: dict = No
 
         if method == request_methods.POST:
             response = requests.post(url, headers=headers, data=json.dumps(payload), params=params, verify=verify)
-            response.raise_for_status()
+            _raise_for_status_with_body(response)
             return response.json()
 
         if method == request_methods.GET:
             response = requests.get(url, headers=headers, params=params, verify=verify)
-            response.raise_for_status()
+            _raise_for_status_with_body(response)
             return response.json()
 
         if method == request_methods.PUT:
             response = requests.put(url, headers=headers, data=json.dumps(payload), params=params, verify=verify)
-            response.raise_for_status()
+            _raise_for_status_with_body(response)
             return response.json()
 
         return None
@@ -33,6 +33,17 @@ def make_request(url: str, method: str = request_methods.GET, headers: dict = No
     except Exception as e:
         print(f"Error during request: {e}")
         raise e
+
+
+def _raise_for_status_with_body(response: requests.Response) -> None:
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as exc:
+        body = response.text[:1000] if response.text else "<empty response body>"
+        raise requests.exceptions.HTTPError(
+            f"{exc} - response body: {body}",
+            response=response,
+        ) from exc
 
 
 def generate_headers(server: dict) -> dict:

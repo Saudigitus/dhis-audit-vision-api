@@ -31,9 +31,13 @@ header. For DHIS2 `api-token`, either configure a DHIS2 personal access token
 for the event hook, which this API validates against `SERVER_DHIS2_URL/api/me`,
 or set `WEBHOOK_API_TOKEN` to a high-entropy value with at least 32 bytes and
 configure the same value in the DHIS2 event hook. `WEBHOOK_API_TOKEN`
-authenticates only the webhook endpoint. Deploy the updated
-`dhis_query_view.sql` definition in DHIS2 as well; it now receives the
-validated integer variable `since_epoch`.
+authenticates only the webhook endpoint.
+
+Deploy both DHIS2 SQL views and configure their IDs separately: `SQL_VIEW_ID`
+must point to `dhis_query_view.sql` for scheduled polling, and
+`RETRIEVE_SQL_VIEW_ID` must point to `dhis_retrieve_query_view.sql` for event
+webhook processing. The webhook view receives `resource_uid`, `created_at`
+formatted as `YYYY-MM-DD HH_MI_SS`, and the validated integer `offset_hours`.
 
 ### 2. Build and start the services (with DHIS2)
 
