@@ -42,7 +42,7 @@ def upgrade() -> None:
         sa.Column("subject", sa.String(), nullable=False),
         sa.Column("objectType", sa.String(), nullable=False),
         sa.Column("action", sa.Enum("CREATE", "UPDATE", "DELETE", name="actionenum"), nullable=False),
-        sa.Column("severity", sa.Enum("INFO", "WARNING", "ERROR", "CRITICAL", name="severityenum"), nullable=False),
+        sa.Column("severity", sa.Enum("LOW", "MEDIUM", "HIGH", name="severityenum"), nullable=False),
         sa.Column("messageTemplate", sa.String(), nullable=False),
         sa.Column("recipients", sa.JSON(), nullable=False),
         sa.Column("created_at", sa.DateTime(), server_default=sa.text("now()"), nullable=False),
